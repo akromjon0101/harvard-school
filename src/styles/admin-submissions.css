@@ -1,0 +1,338 @@
+/* ── Submission Table ─────────────────────────────────────── */
+.band-badge-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: white;
+}
+
+.sub-delete-btn {
+    background: transparent;
+    border: 1px solid #fecaca;
+    color: #ef4444;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+.sub-delete-btn:hover { background: #fef2f2; }
+
+/* ── Modal Overlay ────────────────────────────────────────── */
+.sub-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow-y: auto;
+}
+
+.sub-modal {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 820px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    overflow: hidden;
+    position: relative;
+    animation: sub-modal-in 0.18s ease;
+}
+
+@keyframes sub-modal-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Modal Header ─────────────────────────────────────────── */
+.sub-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: #f8fafc;
+    border-bottom: 1.5px solid #e2e8f0;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.sub-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.sub-modal-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.sub-modal-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #0ea5e9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 900;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.sub-modal-student-name {
+    font-weight: 800;
+    font-size: 16px;
+    color: #1e293b;
+}
+.sub-modal-student-email {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 2px;
+}
+.sub-modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.sub-modal-close:hover { background: #f1f5f9; color: #1e293b; }
+
+/* ── Modal Sections ───────────────────────────────────────── */
+.sub-modal-section {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.sub-modal-section:last-child { border-bottom: none; }
+.sub-modal-section-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.sub-section-score {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    background: #f1f5f9;
+    padding: 2px 10px;
+    border-radius: 20px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* ── Score Grid ───────────────────────────────────────────── */
+.sub-score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+}
+.sub-score-box {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border-top-width: 3px;
+    border-top-style: solid;
+}
+.sub-score-box-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.sub-score-box-value {
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.sub-score-box-sub {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ── Answer Grid ──────────────────────────────────────────── */
+.sub-answer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 6px;
+}
+.sub-answer-cell {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 7px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sub-answer-qnum {
+    font-size: 10px;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+.sub-answer-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    word-break: break-word;
+}
+
+/* ── Writing Block ────────────────────────────────────────── */
+.sub-writing-block {
+    background: #fafbff;
+    border: 1.5px solid #e2e8f0;
+    border-left: 4px solid #4f46e5;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+.sub-writing-block:last-child { margin-bottom: 0; }
+.sub-writing-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #4f46e5;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+.sub-writing-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: #334155;
+    white-space: pre-wrap;
+    max-height: 280px;
+    overflow-y: auto;
+}
+.sub-writing-wc {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+/* ── Audio Player ─────────────────────────────────────────── */
+.sub-audio-player {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 14px 18px;
+}
+
+/* ── Grading Section ──────────────────────────────────────── */
+.sub-grading-section {
+    background: #fafbff;
+}
+.sub-grade-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+.sub-grade-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sub-grade-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.sub-grade-select,
+.sub-grade-input {
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    background: white;
+    transition: border-color 0.15s;
+}
+.sub-grade-select:focus,
+.sub-grade-input:focus { border-color: #6366f1; }
+.sub-grade-textarea {
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    background: white;
+    resize: vertical;
+    line-height: 1.5;
+    transition: border-color 0.15s;
+}
+.sub-grade-textarea:focus { border-color: #6366f1; }
+
+/* ── Modal Actions ────────────────────────────────────────── */
+.sub-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+}
+.sub-btn-delete {
+    background: transparent;
+    border: 1.5px solid #fecaca;
+    color: #ef4444;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+    margin-right: auto;
+}
+.sub-btn-delete:hover { background: #fef2f2; }
+.sub-btn-save {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+.sub-btn-save:hover:not(:disabled) { background: #15803d; }
+.sub-btn-save:disabled { opacity: 0.6; cursor: not-allowed; }

@@ -1,0 +1,515 @@
+/* ═══════════════════════════════════════════════════════════════
+   IELTS Test Report Form (TRF) — Official Document Style
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Page wrapper ── */
+.trf-page {
+  min-height: 100vh;
+  background: #dde3e8;
+  padding: 40px 24px 80px;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+}
+
+/* ── Toolbar (back / print buttons) ── */
+.trf-toolbar {
+  max-width: 920px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trf-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: white;
+  border: 1.5px solid #c1c9d6;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #334155;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.trf-toolbar-btn:hover { background: #f1f5f9; }
+.trf-toolbar-btn.print { background: #003580; color: white; border-color: #003580; }
+.trf-toolbar-btn.print:hover { background: #002060; }
+
+/* ── TRF document ── */
+.trf-document {
+  max-width: 920px;
+  margin: 0 auto;
+  /* Security pattern background */
+  background-color: #f4fbf4;
+  background-image:
+    /* Diagonal guilloché lines */
+    repeating-linear-gradient(
+      45deg,
+      transparent 0, transparent 12px,
+      rgba(0, 80, 20, 0.025) 12px, rgba(0, 80, 20, 0.025) 13px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0, transparent 12px,
+      rgba(0, 80, 20, 0.025) 12px, rgba(0, 80, 20, 0.025) 13px
+    ),
+    /* Fine horizontal grid */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0, transparent 9px,
+      rgba(0, 80, 20, 0.015) 9px, rgba(0, 80, 20, 0.015) 10px
+    );
+  border: 1.5px solid #8aad95;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.22), 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* IELTS watermark */
+.trf-document::before {
+  content: 'IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS  IELTS';
+  position: absolute;
+  top: 30%;
+  left: -20%;
+  width: 140%;
+  font-size: 62px;
+  font-weight: 900;
+  color: rgba(0, 100, 30, 0.035);
+  letter-spacing: 28px;
+  line-height: 1.6;
+  transform: rotate(-28deg);
+  pointer-events: none;
+  z-index: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── Header bar ── */
+.trf-header {
+  background: linear-gradient(135deg, #003580 0%, #004aad 100%);
+  padding: 22px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+
+.trf-header-ielts {
+  display: flex;
+  flex-direction: column;
+}
+
+.trf-ielts-big {
+  font-size: 42px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 8px;
+  line-height: 1;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.trf-ielts-sub {
+  font-size: 8.5px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+.trf-header-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.trf-header-logos {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-end;
+}
+
+.trf-org-logo {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+.trf-org-logo:last-child { border-bottom: none; }
+
+/* ── Body ── */
+.trf-body {
+  padding: 28px 36px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Candidate section ── */
+.trf-candidate-section {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #9abba5;
+}
+
+.trf-candidate-info { flex: 1; }
+
+.trf-info-row {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed #c0cdc5;
+  padding-bottom: 7px;
+}
+
+.trf-info-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #4a5568;
+  min-width: 155px;
+  flex-shrink: 0;
+}
+
+.trf-info-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a202c;
+  font-family: 'Times New Roman', Times, serif;
+}
+.trf-info-value.date-val { font-size: 13.5px; }
+
+/* Centre / candidate number table */
+.trf-centre-table {
+  border: 1.5px solid #6a9a75;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.trf-centre-row { display: flex; }
+
+.trf-centre-cell {
+  flex: 1;
+  padding: 8px 14px;
+  border-right: 1px solid #9abba5;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.trf-centre-cell:last-child { border-right: none; }
+
+.trf-centre-label {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #3a6a4a;
+}
+
+.trf-centre-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a202c;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+/* Candidate photo placeholder */
+.trf-photo-box {
+  width: 115px;
+  flex-shrink: 0;
+  border: 2px solid #6a9a75;
+  background: linear-gradient(135deg, #dceee0 0%, #e8f5ec 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 4px;
+  color: #4a7a55;
+}
+
+.trf-photo-icon { font-size: 40px; opacity: 0.5; }
+
+.trf-photo-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  color: #5a7a65;
+}
+
+/* ── Score section divider ── */
+.trf-section-divider {
+  background: linear-gradient(90deg, #1e4d2b 0%, #2d6e40 100%);
+  color: #fff;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  padding: 7px 0;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Score boxes ── */
+.trf-score-section { margin-bottom: 28px; }
+
+.trf-score-modules {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.trf-score-box {
+  flex: 1;
+  max-width: 170px;
+  border: 2px solid #8a9ab0;
+  background: rgba(230, 240, 230, 0.6);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 8px;
+  gap: 6px;
+}
+
+.trf-score-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #3a5a4a;
+  text-align: center;
+}
+
+.trf-score-value {
+  font-size: 40px;
+  font-weight: 900;
+  color: #1a202c;
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1;
+}
+.trf-score-value.empty {
+  font-size: 28px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Overall band + CEFR row */
+.trf-overall-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.trf-overall-box {
+  border: 3px solid #003580;
+  background: linear-gradient(135deg, #eef3ff 0%, #e0eaff 100%);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 48px;
+  gap: 5px;
+}
+
+.trf-overall-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #003580;
+}
+
+.trf-overall-value {
+  font-size: 62px;
+  font-weight: 900;
+  color: #003580;
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1;
+}
+
+.trf-cefr-box {
+  border: 3px solid #1e4d2b;
+  background: linear-gradient(135deg, #eef6ee 0%, #e0f2e4 100%);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 40px;
+  gap: 5px;
+}
+
+.trf-cefr-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #1e4d2b;
+}
+
+.trf-cefr-value {
+  font-size: 48px;
+  font-weight: 900;
+  color: #1e4d2b;
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1;
+}
+
+/* ── Footer ── */
+.trf-footer {
+  border-top: 2px solid #9abba5;
+  padding: 20px 36px 30px;
+  position: relative;
+  z-index: 1;
+  background: rgba(240, 250, 242, 0.7);
+}
+
+.trf-validity {
+  font-size: 11px;
+  color: #4a5568;
+  text-align: center;
+  margin-bottom: 22px;
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.trf-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Logos */
+.trf-footer-logos {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.trf-logo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.trf-logo-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #003580;
+  letter-spacing: 0.4px;
+}
+
+.trf-logo-sub {
+  font-size: 8px;
+  color: #4a5568;
+  letter-spacing: 0.3px;
+}
+
+.trf-logo-divider {
+  width: 1px;
+  height: 42px;
+  background: #9abba5;
+}
+
+/* Stamp circles */
+.trf-stamp {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 2.5px solid #003580;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  opacity: 0.65;
+  transform: rotate(-8deg);
+  flex-shrink: 0;
+}
+.trf-stamp.right { transform: rotate(5deg); }
+
+.trf-stamp-text {
+  font-size: 6.5px;
+  font-weight: 800;
+  color: #003580;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 6px;
+}
+
+.trf-stamp-year {
+  font-size: 15px;
+  font-weight: 900;
+  color: #003580;
+}
+
+/* Signature */
+.trf-signature-area { text-align: center; }
+
+.trf-signature-line {
+  width: 160px;
+  height: 1px;
+  background: #475569;
+  margin: 0 auto 6px;
+}
+
+.trf-signature-label {
+  font-size: 8.5px;
+  color: #4a5568;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── Print styles ── */
+@media print {
+  .trf-page { background: none; padding: 0; }
+  .trf-toolbar { display: none; }
+  .trf-document { box-shadow: none; border: none; max-width: 100%; }
+}
+
+/* ── Loading / Error ── */
+.trf-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #dde3e8;
+  gap: 16px;
+  font-family: 'Arial', sans-serif;
+  color: #4a5568;
+}
+
+.trf-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #d1d5db;
+  border-top-color: #003580;
+  border-radius: 50%;
+  animation: trf-spin 0.8s linear infinite;
+}
+@keyframes trf-spin { to { transform: rotate(360deg); } }

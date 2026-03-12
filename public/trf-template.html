@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IELTS Test Report Form</title>
+  <style>
+    /* ── Reset ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Screen wrapper ─────────────────────────────────────────────── */
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #b0b8c4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 80px;
+      min-height: 100vh;
+    }
+
+    /* ── Print toolbar ──────────────────────────────────────────────── */
+    .toolbar {
+      width: 210mm;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .toolbar button {
+      background: #fff;
+      border: 1.5px solid #aab0bc;
+      border-radius: 6px;
+      padding: 8px 20px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      color: #2c3a4a;
+      transition: background 0.15s;
+    }
+
+    .toolbar button:hover { background: #eef2f7; }
+
+    .toolbar button.btn-print {
+      background: #1a3a5c;
+      color: #fff;
+      border-color: #1a3a5c;
+    }
+
+    .toolbar button.btn-print:hover { background: #0f2540; }
+
+    /* ── A4 Page ────────────────────────────────────────────────────── */
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      position: relative;
+      overflow: hidden;
+
+      /* Security mint-green base */
+      background-color: #f2faf4;
+      background-image:
+        repeating-linear-gradient(
+          45deg,
+          transparent 0, transparent 16px,
+          rgba(0, 110, 50, 0.028) 16px, rgba(0, 110, 50, 0.028) 17px
+        ),
+        repeating-linear-gradient(
+          -45deg,
+          transparent 0, transparent 16px,
+          rgba(0, 110, 50, 0.028) 16px, rgba(0, 110, 50, 0.028) 17px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          transparent 0, transparent 10px,
+          rgba(0, 110, 50, 0.018) 10px, rgba(0, 110, 50, 0.018) 11px
+        );
+
+      border: 1px solid #9aa0a8;
+      box-shadow:
+        0 6px 32px rgba(0, 0, 0, 0.28),
+        0 2px 8px rgba(0, 0, 0, 0.14);
+    }
+
+    /* ── IELTS Watermark ─────────────────────────────────────────────── */
+    .page::before {
+      content: 'IELTS';
+      position: absolute;
+      top: 46%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-28deg);
+      font-size: 240px;
+      font-weight: 900;
+      color: rgba(0, 120, 55, 0.06);
+      letter-spacing: 40px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 0;
+      user-select: none;
+    }
+
+    /* All direct children sit above watermark */
+    .page > * { position: relative; z-index: 1; }
+
+    /* ── HEADER ─────────────────────────────────────────────────────── */
+    .trf-header {
+      background: #fff;
+      border-bottom: 3px solid #000;
+      padding: 14px 18px 12px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .trf-logo-block {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .trf-wordmark {
+      font-size: 52px;
+      font-weight: 700;
+      color: #000;
+      line-height: 1;
+      letter-spacing: 3px;
+      font-family: Arial Black, Arial, sans-serif;
+    }
+
+    .trf-wordmark-full {
+      font-size: 7.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #444;
+    }
+
+    .trf-header-orgs {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .trf-form-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      color: #000;
+      text-align: center;
+    }
+
+    .trf-org-names {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .trf-org-name {
+      font-size: 8px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 0.3px;
+      padding: 2px 8px;
+      border: 1px solid #bbb;
+      background: #f9f9f9;
+    }
+
+    .trf-module-box {
+      border: 2px solid #000;
+      padding: 8px 14px;
+      text-align: center;
+      min-width: 90px;
+    }
+
+    .trf-module-label {
+      display: block;
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .trf-module-value {
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #000;
+    }
+
+    /* ── INFO BAR (3 cells) ──────────────────────────────────────────── */
+    .trf-info-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      border-bottom: 1.5px solid #888;
+    }
+
+    .trf-info-cell {
+      padding: 5px 14px 7px;
+      background: #ebebeb;
+      border-right: 1px solid #999;
+    }
+
+    .trf-info-cell:last-child { border-right: none; }
+
+    .trf-info-label {
+      display: block;
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #666;
+      margin-bottom: 2px;
+    }
+
+    .trf-info-value {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #000;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── CANDIDATE SECTION ───────────────────────────────────────────── */
+    .trf-candidate {
+      display: grid;
+      grid-template-columns: 1fr 95px;
+      gap: 14px;
+      padding: 10px 18px 12px;
+      border-bottom: 1.5px solid #888;
+      background: rgba(255,255,255,0.6);
+    }
+
+    .trf-candidate-left { display: flex; flex-direction: column; gap: 8px; }
+
+    /* Name rows */
+    .trf-name-fields { display: flex; flex-direction: column; gap: 5px; }
+
+    .trf-name-row {
+      display: flex;
+      align-items: stretch;
+      border: 1px solid #777;
+    }
+
+    .trf-name-key {
+      font-size: 7.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #555;
+      background: #ebebeb;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      min-width: 78px;
+      border-right: 1px solid #777;
+      flex-shrink: 0;
+    }
+
+    .trf-name-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+      padding: 4px 10px;
+      background: #fff;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-height: 28px;
+    }
+
+    /* Details table */
+    .trf-details-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #777;
+    }
+
+    .trf-details-table td {
+      padding: 3.5px 9px;
+      font-size: 8.5px;
+      border: 1px solid #aaa;
+      line-height: 1.3;
+    }
+
+    .trf-details-table .cell-key {
+      background: #ebebeb;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+      width: 90px;
+    }
+
+    .trf-details-table .cell-val {
+      font-weight: 700;
+      color: #000;
+      background: #fff;
+      font-size: 9.5px;
+    }
+
+    /* Photo */
+    .trf-photo {
+      border: 1px solid #777;
+      background: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 130px;
+    }
+
+    .trf-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .trf-photo-icon { font-size: 38px; color: #aaa; line-height: 1; }
+
+    .trf-photo-lbl {
+      font-size: 7.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #888;
+    }
+
+    /* ── RESULTS SECTION ─────────────────────────────────────────────── */
+    .trf-results {
+      padding: 10px 18px 14px;
+      border-bottom: 1.5px solid #888;
+      background: rgba(255,255,255,0.55);
+    }
+
+    .trf-sec-title {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #000;
+      border-bottom: 2px solid #000;
+      padding-bottom: 4px;
+      margin-bottom: 12px;
+    }
+
+    .trf-score-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 1.2fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .trf-score-box {
+      border: 1.5px solid #999;
+      background: #ebebeb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 6px 8px;
+      gap: 6px;
+    }
+
+    .trf-score-box.box-overall {
+      border: 2.5px solid #1a1a1a;
+      background: #e0e0e0;
+    }
+
+    .trf-score-box.box-cefr {
+      border: 1.5px solid #2a4a8a;
+      background: #eef0f8;
+    }
+
+    .trf-score-lbl {
+      font-size: 7.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #555;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .trf-score-num {
+      font-size: 38px;
+      font-weight: 700;
+      color: #000;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .trf-score-box.box-overall .trf-score-num {
+      font-size: 48px;
+      letter-spacing: -2px;
+    }
+
+    .trf-score-box.box-cefr .trf-score-num {
+      font-size: 30px;
+      color: #1a2a6e;
+      letter-spacing: 1px;
+    }
+
+    /* ── VALIDITY LINE ────────────────────────────────────────────────── */
+    .trf-validity {
+      font-size: 8px;
+      color: #555;
+      text-align: center;
+      padding: 6px 18px;
+      font-style: italic;
+      border-bottom: 1px solid #ccc;
+      background: rgba(255,255,255,0.5);
+    }
+
+    /* ── ADMIN COMMENTS ──────────────────────────────────────────────── */
+    .trf-comments {
+      padding: 8px 18px 10px;
+      border-bottom: 1.5px solid #888;
+      background: rgba(255,255,255,0.55);
+    }
+
+    .trf-comments-box {
+      border: 1px solid #999;
+      background: #fff;
+      min-height: 52px;
+      padding: 8px 12px;
+      font-size: 9.5px;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    /* ── AUTHENTICATION ───────────────────────────────────────────────── */
+    .trf-auth {
+      padding: 10px 18px 12px;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 20px;
+      align-items: center;
+      border-bottom: 1.5px solid #888;
+      background: rgba(255,255,255,0.55);
+    }
+
+    .trf-auth-lbl {
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #666;
+      margin-bottom: 3px;
+    }
+
+    .trf-sig-line {
+      border-bottom: 1px solid #000;
+      min-width: 200px;
+      padding-bottom: 2px;
+      min-height: 36px;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .trf-sig-text {
+      font-family: 'Brush Script MT', 'Segoe Script', 'Comic Sans MS', cursive;
+      font-size: 24px;
+      color: #1a1a5e;
+      line-height: 1;
+      letter-spacing: 1px;
+    }
+
+    .trf-auth-date { margin-top: 10px; }
+
+    .trf-date-val {
+      font-size: 11px;
+      font-weight: 700;
+      color: #000;
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
+      min-width: 120px;
+    }
+
+    /* Stamps */
+    .trf-stamps { display: flex; gap: 14px; align-items: center; }
+
+    .trf-stamp {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .trf-stamp-1 {
+      width: 78px;
+      height: 78px;
+      border: 2.5px solid #4a1570;
+      transform: rotate(-5deg);
+      opacity: 0.82;
+    }
+
+    .trf-stamp-2 {
+      width: 62px;
+      height: 62px;
+      border: 3px double #1a4a1a;
+      transform: rotate(7deg);
+      opacity: 0.80;
+    }
+
+    .trf-stamp-text {
+      font-size: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      text-align: center;
+      line-height: 1.4;
+      color: #4a1570;
+    }
+
+    .trf-stamp-2 .trf-stamp-text { color: #1a4a1a; }
+
+    .trf-stamp-big {
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: #4a1570;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .trf-stamp-2 .trf-stamp-big { font-size: 12px; color: #1a4a1a; }
+
+    /* ── FOOTER ──────────────────────────────────────────────────────── */
+    .trf-footer {
+      padding: 10px 18px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      background: #fff;
+      border-top: 2.5px solid #000;
+    }
+
+    .trf-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      filter: grayscale(100%);
+      opacity: 0.72;
+    }
+
+    .trf-logo-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #111;
+      letter-spacing: 0.2px;
+    }
+
+    .trf-logo-sub {
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #666;
+    }
+
+    .trf-logo-sep {
+      width: 1px;
+      height: 44px;
+      background: #bbb;
+    }
+
+    /* ── Print mode ──────────────────────────────────────────────────── */
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+        background: white;
+      }
+
+      .toolbar { display: none; }
+
+      .page {
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        width: 210mm;
+        min-height: 297mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Print toolbar (hidden on print) -->
+  <div class="toolbar">
+    <button onclick="history.back()">← Back</button>
+    <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+  </div>
+
+  <!-- A4 Document -->
+  <div class="page">
+
+    <!-- ══ HEADER ══════════════════════════════════════════════════════ -->
+    <div class="trf-header">
+
+      <div class="trf-logo-block">
+        <div class="trf-wordmark">IELTS</div>
+        <div class="trf-wordmark-full">International English Language Testing System</div>
+      </div>
+
+      <div class="trf-header-orgs">
+        <div class="trf-form-title">Test Report Form</div>
+        <div class="trf-org-names">
+          <span class="trf-org-name">British Council</span>
+          <span class="trf-org-name">IDP: IELTS Australia</span>
+          <span class="trf-org-name">Cambridge Assessment English</span>
+        </div>
+      </div>
+
+      <div class="trf-module-box">
+        <span class="trf-module-label">Test Module</span>
+        <span class="trf-module-value">{{testModule}}</span>
+      </div>
+
+    </div>
+
+    <!-- ══ INFO BAR ═════════════════════════════════════════════════════ -->
+    <div class="trf-info-bar">
+      <div class="trf-info-cell">
+        <span class="trf-info-label">Centre Number</span>
+        <span class="trf-info-value">{{centreNumber}}</span>
+      </div>
+      <div class="trf-info-cell">
+        <span class="trf-info-label">Test Date</span>
+        <span class="trf-info-value">{{testDate}}</span>
+      </div>
+      <div class="trf-info-cell">
+        <span class="trf-info-label">Candidate Number</span>
+        <span class="trf-info-value">{{candidateNumber}}</span>
+      </div>
+    </div>
+
+    <!-- ══ CANDIDATE SECTION ════════════════════════════════════════════ -->
+    <div class="trf-candidate">
+
+      <div class="trf-candidate-left">
+
+        <!-- Name fields -->
+        <div class="trf-name-fields">
+          <div class="trf-name-row">
+            <span class="trf-name-key">Family Name</span>
+            <span class="trf-name-val">{{familyName}}</span>
+          </div>
+          <div class="trf-name-row">
+            <span class="trf-name-key">First Name</span>
+            <span class="trf-name-val">{{firstName}}</span>
+          </div>
+        </div>
+
+        <!-- Details table -->
+        <table class="trf-details-table">
+          <tbody>
+            <tr>
+              <td class="cell-key">Candidate ID</td>
+              <td class="cell-val">{{candidateId}}</td>
+              <td class="cell-key">Date of Birth</td>
+              <td class="cell-val">{{dateOfBirth}}</td>
+            </tr>
+            <tr>
+              <td class="cell-key">Sex</td>
+              <td class="cell-val">{{sex}}</td>
+              <td class="cell-key">Scheme Code</td>
+              <td class="cell-val">{{schemeCode}}</td>
+            </tr>
+            <tr>
+              <td class="cell-key">Country of Origin</td>
+              <td class="cell-val">{{country}}</td>
+              <td class="cell-key">First Language</td>
+              <td class="cell-val">{{firstLanguage}}</td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+
+      <!-- Candidate photo -->
+      <div class="trf-photo">
+        <div class="trf-photo-icon">👤</div>
+        <span class="trf-photo-lbl">Photograph</span>
+      </div>
+
+    </div>
+
+    <!-- ══ TEST RESULTS ══════════════════════════════════════════════════ -->
+    <div class="trf-results">
+      <div class="trf-sec-title">Test Results</div>
+      <div class="trf-score-row">
+
+        <div class="trf-score-box">
+          <div class="trf-score-lbl">Listening</div>
+          <div class="trf-score-num">{{listening}}</div>
+        </div>
+
+        <div class="trf-score-box">
+          <div class="trf-score-lbl">Reading</div>
+          <div class="trf-score-num">{{reading}}</div>
+        </div>
+
+        <div class="trf-score-box">
+          <div class="trf-score-lbl">Writing</div>
+          <div class="trf-score-num">{{writing}}</div>
+        </div>
+
+        <div class="trf-score-box">
+          <div class="trf-score-lbl">Speaking</div>
+          <div class="trf-score-num">{{speaking}}</div>
+        </div>
+
+        <div class="trf-score-box box-overall">
+          <div class="trf-score-lbl">Overall Band Score</div>
+          <div class="trf-score-num">{{overallBand}}</div>
+        </div>
+
+        <div class="trf-score-box box-cefr">
+          <div class="trf-score-lbl">CEFR Level</div>
+          <div class="trf-score-num">{{cefrLevel}}</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ VALIDITY ══════════════════════════════════════════════════════ -->
+    <div class="trf-validity">
+      This Test Report Form is valid for two years from the date of the test. &nbsp;
+      Valid until: <strong>{{validUntil}}</strong>
+    </div>
+
+    <!-- ══ ADMIN COMMENTS ════════════════════════════════════════════════ -->
+    <div class="trf-comments">
+      <div class="trf-sec-title">Administrator Comments</div>
+      <div class="trf-comments-box">{{adminComments}}</div>
+    </div>
+
+    <!-- ══ AUTHENTICATION ════════════════════════════════════════════════ -->
+    <div class="trf-auth">
+
+      <div>
+        <div class="trf-auth-lbl">Authorised Signatory</div>
+        <div class="trf-sig-line">
+          <span class="trf-sig-text">{{administratorSignature}}</span>
+        </div>
+        <div class="trf-auth-date">
+          <div class="trf-auth-lbl">Date</div>
+          <div class="trf-date-val">{{validationDate}}</div>
+        </div>
+      </div>
+
+      <div class="trf-stamps">
+        <!-- Stamp 1: Official Test Centre (purple) -->
+        <div class="trf-stamp trf-stamp-1">
+          <div class="trf-stamp-big">IELTS</div>
+          <div class="trf-stamp-text">Official<br>Test Centre</div>
+        </div>
+
+        <!-- Stamp 2: IDP (green) -->
+        <div class="trf-stamp trf-stamp-2">
+          <div class="trf-stamp-big">IDP</div>
+          <div class="trf-stamp-text">IELTS<br>Australia</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ FOOTER ════════════════════════════════════════════════════════ -->
+    <div class="trf-footer">
+      <div class="trf-logo">
+        <span class="trf-logo-name">British Council</span>
+        <span class="trf-logo-sub">IELTS Partner</span>
+      </div>
+      <div class="trf-logo-sep"></div>
+      <div class="trf-logo">
+        <span class="trf-logo-name">IDP: IELTS Australia</span>
+        <span class="trf-logo-sub">IELTS Partner</span>
+      </div>
+      <div class="trf-logo-sep"></div>
+      <div class="trf-logo">
+        <span class="trf-logo-name">Cambridge Assessment English</span>
+        <span class="trf-logo-sub">IELTS Partner</span>
+      </div>
+    </div>
+
+  </div><!-- /.page -->
+
+</body>
+</html>

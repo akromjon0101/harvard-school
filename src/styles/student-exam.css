@@ -1,0 +1,713 @@
+/* =====================================================
+   IELTS OFFICIAL EXAM SIMULATION — student-exam.css
+   ===================================================== */
+
+/* ── Root Layout ──────────────────────────────── */
+.ielts-reading-simulation {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    background: #f0f0f0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    color: #1a1a1a;
+}
+
+/* ── Top Header ─────────────────────────────────── */
+.sim-header-dark {
+    background: #1e1e1e;
+    color: #fff;
+    padding: 8px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 48px;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.exam-mode {
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.header-timer {
+    background: #f5c400;
+    color: #000;
+    padding: 4px 16px;
+    font-weight: bold;
+    font-size: 0.93rem;
+    border-radius: 3px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.btn-help {
+    background: #cc0000;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.btn-help:hover {
+    background: #aa0000;
+}
+
+/* ── Split Pane ─────────────────────────────────── */
+.simulation-split {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ─── LEFT: Passage ─────────────────────────────── */
+.passage-pane {
+    overflow-y: auto;
+    padding: 28px 32px;
+    background: #ffffff;
+    line-height: 1.9;
+    flex-shrink: 0;
+    min-width: 200px;
+}
+
+.passage-inner {
+    max-width: 100%;
+}
+
+.passage-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 16px;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+.passage-html-content {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 0.97rem;
+    line-height: 2;
+    color: #1a1a1a;
+}
+
+.passage-html-content p {
+    margin: 0 0 14px;
+    text-align: justify;
+}
+
+.passage-html-content strong,
+.passage-html-content b {
+    font-weight: 700;
+}
+
+.highlight-yellow {
+    background-color: #fff176;
+    cursor: pointer;
+}
+
+/* ─── RESIZER ─────────────────────────────────────── */
+.split-resizer {
+    width: 6px;
+    background: #d0d0d0;
+    cursor: col-resize;
+    flex-shrink: 0;
+    position: relative;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.split-resizer:hover,
+.split-resizer.dragging {
+    background: #3367d6;
+}
+
+.split-resizer::after {
+    content: '';
+    width: 2px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 2px;
+}
+
+/* ─── RIGHT: Questions ─────────────────────────── */
+.questions-pane {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    background: #f8f8f8;
+    min-width: 200px;
+}
+
+/* Question Group Block */
+.question-group-block {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.group-range-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #111;
+    margin: 0 0 5px;
+}
+
+.group-instructions {
+    font-size: 0.87rem;
+    color: #333;
+    margin: 0 0 12px;
+    line-height: 1.55;
+    font-style: italic;
+}
+
+/* "List of People / Headings" box */
+.heading-bank {
+    background: #f4f7fb;
+    border: 1px solid #c0cfe0;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 0.88rem;
+}
+
+.heading-bank-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    color: #333;
+}
+
+.heading-bank-item {
+    padding: 2px 0;
+    color: #222;
+    line-height: 1.5;
+}
+
+.heading-bank-item strong {
+    font-weight: 700;
+    margin-right: 3px;
+}
+
+/* ─── Question Item Row ──────────────────────────── */
+.question-item {
+    display: flex;
+    gap: 0;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    align-items: flex-start;
+}
+
+.question-item:last-child {
+    border-bottom: none;
+}
+
+/* Sidebar */
+.q-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 44px;
+    padding-top: 1px;
+}
+
+/* ─── Question Number: BLACK SQUARE with WHITE text ─ */
+.q-number-box {
+    width: 26px;
+    height: 22px;
+    background: #111;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.78rem;
+    border-radius: 2px;
+    flex-shrink: 0;
+    letter-spacing: 0;
+}
+
+/* answered state — keep black, add a tick-like border */
+.q-number-box.answered {
+    background: #0a4db0;
+}
+
+.q-flag-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-top: 3px;
+    opacity: 0.45;
+    padding: 0;
+    line-height: 1;
+}
+
+.q-flag-btn:hover {
+    opacity: 1;
+}
+
+/* Main question body */
+.q-main {
+    flex: 1;
+    padding-left: 2px;
+}
+
+.q-main p {
+    margin: 0 0 7px;
+    font-size: 0.91rem;
+    line-height: 1.6;
+    color: #1a1a1a;
+}
+
+/* ─── MCQ: Circle-based options ─────────────────── */
+.mcq-options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mcq-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    transition: background 0.1s;
+}
+
+.mcq-option:hover {
+    background: #f0f4ff;
+}
+
+/* Hide native radio/checkbox */
+.mcq-option input[type="radio"],
+.mcq-option input[type="checkbox"] {
+    display: none;
+}
+
+/* Custom circle for each option */
+.mcq-circle {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #333;
+    flex-shrink: 0;
+    background: #fff;
+    transition: all 0.13s;
+}
+
+.mcq-option.checked .mcq-circle {
+    background: #1a56db;
+    border-color: #1a56db;
+    color: #fff;
+}
+
+.mcq-option-text {
+    color: #222;
+}
+
+/* ─── TRUE/FALSE/NOT GIVEN ───────────────────────── */
+.tfng-options {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.tfng-btn {
+    padding: 4px 12px;
+    font-size: 0.79rem;
+    font-weight: 700;
+    border: 1.5px solid #aaa;
+    border-radius: 3px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.12s;
+}
+
+.tfng-btn:hover {
+    border-color: #1a56db;
+    color: #1a56db;
+}
+
+.tfng-btn.selected {
+    background: #1a56db;
+    color: #fff;
+    border-color: #1a56db;
+}
+
+/* ─── Text inputs (fill blank, sentence completion) ── */
+.cb-dotted-input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fafafa;
+    outline: none;
+    padding: 5px 10px;
+    min-width: 140px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #111;
+    transition: border-color 0.15s;
+}
+
+.cb-dotted-input:focus {
+    border-color: #1a56db;
+    background: #fff;
+}
+
+/* Select dropdowns */
+.q-select {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.87rem;
+    color: #222;
+    background: #fff;
+    cursor: pointer;
+    min-width: 175px;
+    outline: none;
+}
+
+.q-select:focus {
+    border-color: #1a56db;
+}
+
+/* ─── Summary inline inputs ─────────────────────── */
+.summary-completion-text {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 0.93rem;
+    line-height: 2.3;
+}
+
+.summary-q-num {
+    font-size: 0.7em;
+    color: #555;
+    vertical-align: super;
+    font-weight: 700;
+    margin-right: 1px;
+}
+
+/* ─── Bottom Footer: Part groups ─────────────────── */
+.sim-footer-grid {
+    background: #e4e7ea;
+    border-top: 2px solid #c0c5cb;
+    padding: 8px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    flex-shrink: 0;
+    min-height: 70px;
+    overflow-x: auto;
+}
+
+/* Each Part block */
+.footer-part-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 10px;
+    border-right: 1px solid #b0b8c1;
+    flex-shrink: 0;
+}
+
+.footer-part-block:last-of-type {
+    border-right: none;
+}
+
+.footer-part-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.footer-nums-row {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
+/* Individual number box (small squares) */
+.nav-item {
+    width: 24px;
+    height: 24px;
+    background: #fff;
+    border: 1px solid #8a9099;
+    font-size: 0.68rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #222;
+    border-radius: 2px;
+    transition: background 0.1s, border-color 0.1s;
+    flex-shrink: 0;
+}
+
+.nav-item:hover {
+    border-color: #1a56db;
+    color: #1a56db;
+}
+
+.nav-item.answered {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}
+
+.nav-item.flagged {
+    background: #c0392b;
+    color: #fff;
+    border-color: #c0392b;
+}
+
+.dot-indicator {
+    display: none;
+}
+
+/* Numbers nav (flat, no part groups) */
+.numbers-nav {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    flex: 1;
+    align-items: center;
+}
+
+/* Footer divider */
+.footer-divider {
+    width: 1px;
+    height: 48px;
+    background: #b0b5bb;
+    flex-shrink: 0;
+    margin: 0 4px;
+}
+
+/* ─── Submit Button ────────────────────────────── */
+.finish-btn {
+    background: #1a7a34;
+    color: white;
+    border: none;
+    padding: 9px 26px;
+    font-weight: 700;
+    font-size: 0.87rem;
+    cursor: pointer;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+    align-self: center;
+    transition: background 0.15s;
+    letter-spacing: 0.3px;
+}
+
+.finish-btn:hover {
+    background: #125a26;
+}
+
+/* ─── Intro / Loading / Submitted ────────────── */
+.exam-intro {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f0f4f8;
+    padding: 24px;
+}
+
+.intro-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+    padding: 48px 52px;
+    max-width: 540px;
+    width: 100%;
+    text-align: center;
+}
+
+.intro-card h1 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #1a3a6a;
+    margin-bottom: 8px;
+}
+
+.intro-card h2 {
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 18px;
+}
+
+.btn-start {
+    background: #1a3a6a;
+    color: white;
+    border: none;
+    padding: 13px 38px;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-start:hover {
+    background: #132c52;
+}
+
+.btn-primary {
+    background: #1a3a6a;
+    color: white;
+    border: none;
+    padding: 9px 26px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: #132c52;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: #1a3a6a;
+    border: 1.5px solid #1a3a6a;
+    padding: 9px 22px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-ghost:hover {
+    background: #f0f4ff;
+}
+
+.exam-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+.exam-submitted {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 12px;
+    color: #1a3a6a;
+}
+
+/* ─── Modal ───────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 6px;
+    width: 420px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    background: #1a3a6a;
+    color: white;
+    padding: 15px 22px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.modal-body {
+    padding: 18px 22px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+.modal-body p {
+    margin: 0 0 10px;
+}
+
+.modal-footer {
+    border-top: 1px solid #eee;
+    padding: 14px 22px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* ─── Scrollbars ──────────────────────────────── */
+.passage-pane::-webkit-scrollbar,
+.questions-pane::-webkit-scrollbar {
+    width: 6px;
+}
+
+.passage-pane::-webkit-scrollbar-track,
+.questions-pane::-webkit-scrollbar-track {
+    background: #f0f0f0;
+}
+
+.passage-pane::-webkit-scrollbar-thumb,
+.questions-pane::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 3px;
+}
+
+.passage-pane::-webkit-scrollbar-thumb:hover,
+.questions-pane::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+.muted {
+    color: #888;
+    font-style: italic;
+    font-size: 0.88rem;
+}

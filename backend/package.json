@@ -1,0 +1,40 @@
+{
+    "name": "ielts-mock-backend",
+    "version": "1.0.0",
+    "description": "Backend for IELTS Mock Test Platform",
+    "main": "server.js",
+    "type": "module",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+    },
+    "keywords": [
+        "ielts",
+        "mock-test",
+        "admin-panel"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "bcryptjs": "^3.0.3",
+        "body-parser": "^1.20.2",
+        "canvas": "^3.2.1",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2",
+        "express-rate-limit": "^8.2.1",
+        "helmet": "^8.1.0",
+        "jsonwebtoken": "^9.0.3",
+        "mongoose": "^8.0.3",
+        "morgan": "^1.10.1",
+        "multer": "^2.0.2",
+        "openai": "^6.25.0",
+        "pdf-parse": "^2.4.5",
+        "pdfjs-dist": "^5.4.624",
+        "tesseract.js": "^7.0.0"
+    },
+    "devDependencies": {
+        "mongodb-memory-server": "^11.0.1",
+        "nodemon": "^3.0.2"
+    }
+}
