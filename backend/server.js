@@ -21,9 +21,9 @@ import userRoutes from './routes/userRoutes.js';
 import pdfRoutes from './routes/pdfRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import practiceRoutes from './routes/practiceRoutes.js';
-import ttsRoutes        from './routes/ttsRoutes.js';
+import ttsRoutes from './routes/ttsRoutes.js';
 import openaiUsageRoutes from './routes/openaiUsageRoutes.js';
-import gradeRoutes       from './routes/gradeRoutes.js';
+import gradeRoutes from './routes/gradeRoutes.js';
 
 dotenv.config();
 
@@ -31,6 +31,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 1); // Railway va orkestra proxylari uchun Rate Limit ni xatosiz ishlashiga moslash
 const PORT = process.env.PORT || 5001;
 
 // Security Headers
@@ -121,7 +122,7 @@ const ALLOWED_MIMES = new Set([
 ]);
 
 const fileFilter = (req, file, cb) => {
-  const extOk  = ALLOWED_EXTENSIONS.test(path.extname(file.originalname));
+  const extOk = ALLOWED_EXTENSIONS.test(path.extname(file.originalname));
   const mimeOk = ALLOWED_MIMES.has(file.mimetype.toLowerCase());
   if (extOk || mimeOk) {
     cb(null, true);
@@ -164,7 +165,7 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000
     });
     console.log('✅ MongoDB Atlas Connected Successfully');
-    } catch (err) {
+  } catch (err) {
     console.error('❌ Atlas Connection Error Details:', err.message);
     console.warn('⚠️ Atlas Connection Failed. Switching to In-Memory MongoDB for development...');
     console.warn('⚠️ REAL PROJECT: Set MONGODB_URI in backend/.env to your MongoDB Atlas connection string so tests PERSIST.');
@@ -185,7 +186,7 @@ const connectDB = async () => {
     const { default: User } = await import('./models/User.js');
     console.log('👤 Checking Admin User...');
 
-    const adminEmail    = process.env.ADMIN_EMAIL    || 'admin@gmail.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
     const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2026!SecurePass';
 
     let admin = await User.findOne({ email: adminEmail });
@@ -232,12 +233,12 @@ app.use('/api/listening', listeningRoutes);
 app.use('/api/writing', writingRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/pdf',   pdfRoutes);
-app.use('/api/ai',       aiRoutes);
+app.use('/api/pdf', pdfRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/practice', practiceRoutes);
-app.use('/api/tts',          ttsRoutes);
+app.use('/api/tts', ttsRoutes);
 app.use('/api/openai-usage', openaiUsageRoutes);
-app.use('/api/grade',       gradeRoutes);
+app.use('/api/grade', gradeRoutes);
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {
