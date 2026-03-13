@@ -123,6 +123,10 @@ const submissionSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-});
+}, { timestamps: false });
+
+submissionSchema.index({ user: 1, submittedAt: -1 });
+submissionSchema.index({ exam: 1 });
+submissionSchema.index({ status: 1 });
 
 export default mongoose.model('Submission', submissionSchema);

@@ -59,7 +59,11 @@ export const createExam = async (req, res) => {
 
 export const getExams = async (req, res) => {
     try {
-        const exams = await Exam.find().sort({ createdAt: -1 });
+        // Return summary only — modules are large and not needed for listing
+        const exams = await Exam.find()
+            .select('title description status testLevel aiGradingEnabled createdAt')
+            .sort({ createdAt: -1 })
+            .lean();
         res.json(exams);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -68,7 +72,7 @@ export const getExams = async (req, res) => {
 
 export const getExamById = async (req, res) => {
     try {
-        const exam = await Exam.findById(req.params.id);
+        const exam = await Exam.findById(req.params.id).lean();
         if (!exam) return res.status(404).json({ error: 'Exam not found' });
         res.json(exam);
     } catch (err) {

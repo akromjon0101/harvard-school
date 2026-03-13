@@ -317,8 +317,10 @@ export const updateSubmission = async (req, res) => {
 export const getUserSubmissions = async (req, res) => {
     try {
         const submissions = await Submission.find({ user: req.params.userId })
+            .select('-answers -writingTexts -writingImages -speakingTexts -speakingAudioUrl -speakingParts -aiGrading')
             .populate('exam', 'title testLevel')
-            .sort({ submittedAt: -1 });
+            .sort({ submittedAt: -1 })
+            .lean();
         res.json(submissions);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -327,11 +329,22 @@ export const getUserSubmissions = async (req, res) => {
 
 export const getAllSubmissions = async (req, res) => {
     try {
-        const submissions = await Submission.find()
-            .populate('user', 'name email')
-            .populate('exam', 'title')
-            .sort({ submittedAt: -1 });
-        res.json(submissions);
+        const page  = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit = Math.min(100, parseInt(req.query.limit) || 50);
+        const skip  = (page - 1) * limit;
+
+        const [submissions, total] = await Promise.all([
+            Submission.find()
+                .select('-answers -writingTexts -writingImages -speakingTexts -speakingAudioUrl -speakingParts')
+                .populate('user', 'name email')
+                .populate('exam', 'title')
+                .sort({ submittedAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Submission.countDocuments(),
+        ]);
+        res.json({ submissions, total, page, pages: Math.ceil(total / limit) });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

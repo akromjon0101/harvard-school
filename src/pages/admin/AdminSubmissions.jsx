@@ -76,8 +76,12 @@ export default function AdminSubmissions() {
     const modalRef = useRef(null)
 
     useEffect(() => {
-        api('/submissions')
-            .then(data => { setSubmissions(Array.isArray(data) ? data : []); setLoading(false) })
+        api('/submissions?limit=100')
+            .then(data => {
+                const list = Array.isArray(data) ? data : (data?.submissions || [])
+                setSubmissions(list)
+                setLoading(false)
+            })
             .catch(() => setLoading(false))
     }, [])
 

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
@@ -89,6 +90,7 @@ const corsOptions = {
 };
 
 // Middleware
+app.use(compression());
 app.use(cors(corsOptions));
 app.use(bodyParser.json({ limit: '10mb' })); // Reduced from 50mb
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
