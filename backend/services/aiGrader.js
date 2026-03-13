@@ -14,11 +14,12 @@ export function roundIELTSOverall(avg) {
     return Math.round(Math.min(9, Math.max(0, avg)) * 2) / 2;
 }
 
-async function chatWithTracking({ model = 'gpt-4o', messages, context = '' }) {
+async function chatWithTracking({ model = 'gpt-4o', messages, context = '', maxTokens = 1500 }) {
     const response = await openai.chat.completions.create({
         model,
         temperature: 0.1,
         response_format: { type: 'json_object' },
+        max_tokens: maxTokens,
         messages,
     });
     trackChat({
@@ -241,12 +242,27 @@ export async function gradeWritingTask(text, taskIndex, imageUrl = null, taskPro
     }
 
     const isTask1   = taskIndex === 0;
-    const hasImage  = isTask1 && imageUrl && imageUrl.startsWith('http');
     const taskLabel = isTask1
         ? 'Task 1 (describe a chart, graph, diagram, map, or write a letter)'
         : 'Task 2 (argumentative/discussion essay)';
-    // Always use gpt-4o for Task 1 (needs strong instruction-following + vision)
-    const model = isTask1 ? 'gpt-4o' : 'gpt-4o-mini';
+
+    // Try to fetch image as base64 to avoid Railway ephemeral URL issues
+    let imageBase64 = null;
+    if (isTask1 && imageUrl && imageUrl.startsWith('http')) {
+        try {
+            const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10000) });
+            if (imgRes.ok) {
+                const buf = await imgRes.arrayBuffer();
+                const mime = imgRes.headers.get('content-type') || 'image/jpeg';
+                imageBase64 = `data:${mime};base64,${Buffer.from(buf).toString('base64')}`;
+            }
+        } catch (err) {
+            console.warn('[AI] Could not fetch Task 1 image, grading without it:', err.message);
+        }
+    }
+    const hasImage = !!imageBase64;
+    // Use gpt-4o only when image is present (vision), gpt-4o-mini for text-only
+    const model = hasImage ? 'gpt-4o' : 'gpt-4o-mini';
 
     // Word count for penalty check
     const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -297,7 +313,7 @@ export async function gradeWritingTask(text, taskIndex, imageUrl = null, taskPro
     let userContent;
     if (hasImage) {
         userContent = [
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
+            { type: 'image_url', image_url: { url: imageBase64, detail: 'high' } },
             {
                 type: 'text',
                 text: `You are grading IELTS Writing Task 1. Start from Band 5.5 and only raise with clear evidence.
@@ -425,6 +441,7 @@ Overall band = mean of 4 criteria bands, rounded to nearest 0.5`;
     const response = await chatWithTracking({
         model,
         context: `writing_grade_task${taskIndex}`,
+        maxTokens: hasImage ? 2000 : 1500,
         messages: [
             { role: 'system', content: WRITING_SYSTEM_PROMPT },
             { role: 'user',   content: userContent },
