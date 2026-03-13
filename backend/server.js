@@ -58,13 +58,30 @@ const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    // In development allow any localhost port (5173, 5174, 5178, etc.)
+    // In development allow any localhost port
     if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)) {
       return callback(null, true);
     }
-    // In production only allow the configured FRONTEND_URL
-    if (origin === process.env.FRONTEND_URL) return callback(null, true);
-    callback(new Error('Not allowed by CORS'));
+    // In production allow configured origins (comma-separated FRONTEND_URL)
+    const allowed = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim()) : [];
+
+    // Check if origin matches any allowed origin or its www/non-www counterpart
+    const isAllowed = allowed.some(domain => {
+      if (domain === origin) return true;
+      // Try adding/removing www
+      const withWWW = domain.includes('://www.') ? domain : domain.replace('://', '://www.');
+      const withoutWWW = domain.replace('://www.', '://');
+      return origin === withWWW || origin === withoutWWW;
+    });
+
+    if (isAllowed) {
+      return callback(null, true);
+    }
+
+    console.warn(`⚠️ CORS blocked request from: ${origin}. Allowed origins are: ${allowed.join(', ')}`);
+    const error = new Error(`CORS Error: Origin ${origin} is not allowed.`);
+    error.status = 403;
+    callback(error);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -77,7 +94,11 @@ app.use(bodyParser.json({ limit: '10mb' })); // Reduced from 50mb
 app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
 // Static files for uploads
-const uploadDir = path.join(__dirname, 'uploads');
+// Railway Volume mount path is /app/uploads
+const uploadDir = (process.env.NODE_ENV === 'production' && fs.existsSync('/app/uploads'))
+  ? '/app/uploads'
+  : path.join(__dirname, 'uploads');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

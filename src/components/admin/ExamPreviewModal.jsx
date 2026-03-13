@@ -32,7 +32,7 @@ function detectIssues(parts) {
     if (module === 'writing' && !section.passageContent?.trim()) {
       issues.push({ severity: 'info', ctx, msg: 'Writing task prompt is empty' })
     }
-    ;(section.questions || []).forEach((q, qi) => {
+    ; (section.questions || []).forEach((q, qi) => {
       const qLabel = `Block ${qi + 1} (Q${q.startNumber ?? q.questionNumber})`
       if (q.type === 'mcq' && (q.options || []).filter(Boolean).length < 2) {
         issues.push({ severity: 'error', ctx, msg: `${qLabel}: MCQ has fewer than 2 options` })
@@ -72,19 +72,19 @@ function fmtTime(s) {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 }
 
-const NOOP = () => {}
+const NOOP = () => { }
 
 // ─── Issue Panel ──────────────────────────────────────────────────────────────
 function IssuePanel({ issues }) {
   const errors = issues.filter(i => i.severity === 'error')
-  const warns  = issues.filter(i => i.severity === 'warn')
-  const infos  = issues.filter(i => i.severity === 'info')
+  const warns = issues.filter(i => i.severity === 'warn')
+  const infos = issues.filter(i => i.severity === 'info')
   return (
     <div className="epv-issues-panel">
       {[
         { list: errors, label: `✖ ${errors.length} Error${errors.length !== 1 ? 's' : ''}`, mod: 'error' },
-        { list: warns,  label: `⚠ ${warns.length} Warning${warns.length !== 1 ? 's' : ''}`, mod: 'warn'  },
-        { list: infos,  label: null, mod: 'info' },
+        { list: warns, label: `⚠ ${warns.length} Warning${warns.length !== 1 ? 's' : ''}`, mod: 'warn' },
+        { list: infos, label: null, mod: 'info' },
       ].map(({ list, label, mod }) =>
         list.length === 0 ? null : (
           <div key={mod} className="epv-issue-group">
@@ -109,9 +109,11 @@ function WritingPlaceholder({ sectionIdx }) {
     <div className="ip-answer-col">
       <div
         className="ip-writing-textarea"
-        style={{ background: '#f8fafc', color: '#94a3b8', display: 'flex',
+        style={{
+          background: '#f8fafc', color: '#94a3b8', display: 'flex',
           alignItems: 'flex-start', padding: '14px', fontFamily: 'Georgia, serif',
-          fontSize: '14px', lineHeight: '1.7', userSelect: 'none' }}
+          fontSize: '14px', lineHeight: '1.7', userSelect: 'none'
+        }}
       >
         Students will write their {sectionIdx === 0 ? 'Task 1 report' : 'Task 2 essay'} here
         (minimum {min} words)…
@@ -135,22 +137,22 @@ export default function ExamPreviewModal({
   saving = false,
   publishErrors = [],
 }) {
-  const [partIndex, setPartIndex]         = useState(0)
-  const [showIssues, setShowIssues]       = useState(true)
+  const [partIndex, setPartIndex] = useState(0)
+  const [showIssues, setShowIssues] = useState(true)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const [audioProgress, setAudioProgress]   = useState(0)
-  const [audioDuration, setAudioDuration]   = useState(0)
+  const [audioProgress, setAudioProgress] = useState(0)
+  const [audioDuration, setAudioDuration] = useState(0)
   const audioRef = useRef(null)
 
   // ── Flat parts list (same logic as IELTSExamPage) ──
   const parts = useMemo(() => {
     if (!examData?.modules) return []
     const result = []
-    ;['listening', 'reading', 'writing'].forEach(mod => {
-      const moduleData = examData.modules[mod]
-      if (!Array.isArray(moduleData) || moduleData.length === 0) return
-      moduleData.forEach((section, idx) => result.push({ module: mod, sectionIdx: idx, section }))
-    })
+      ;['listening', 'reading', 'writing'].forEach(mod => {
+        const moduleData = examData.modules[mod]
+        if (!Array.isArray(moduleData) || moduleData.length === 0) return
+        moduleData.forEach((section, idx) => result.push({ module: mod, sectionIdx: idx, section }))
+      })
     return result
   }, [examData])
 
@@ -158,11 +160,11 @@ export default function ExamPreviewModal({
   const { allQNums, qPartMap } = useMemo(() => {
     const nums = [], map = {}
     parts.forEach((part, pIdx) => {
-      ;(part.section.questions || []).forEach(q => {
+      ; (part.section.questions || []).forEach(q => {
         if (!q) return
-        const gaps   = (q.questionText?.match(/\[gap\]/gi) || []).length
-        const mLen   = (q.matchingItems || []).length
-        const tGaps  = q.type === 'table-completion' && q.tableData?.rows
+        const gaps = (q.questionText?.match(/\[gap\]/gi) || []).length
+        const mLen = (q.matchingItems || []).length
+        const tGaps = q.type === 'table-completion' && q.tableData?.rows
           ? q.tableData.rows.reduce((a, row) => a + row.reduce((b, c) => b + ((c || '').match(/\[gap\]/gi) || []).length, 0), 0)
           : 0
         const total = Math.max(gaps, mLen, tGaps, q.correctAnswers?.length || 0, 1)
@@ -176,10 +178,10 @@ export default function ExamPreviewModal({
     return { allQNums: nums, qPartMap: map }
   }, [parts])
 
-  const issues       = useMemo(() => detectIssues(parts), [parts])
-  const errorCount   = issues.filter(i => i.severity === 'error').length
-  const warnCount    = issues.filter(i => i.severity === 'warn').length
-  const hasErrors    = publishErrors.length > 0
+  const issues = useMemo(() => detectIssues(parts), [parts])
+  const errorCount = issues.filter(i => i.severity === 'error').length
+  const warnCount = issues.filter(i => i.severity === 'warn').length
+  const hasErrors = publishErrors.length > 0
   const panelVisible = showIssues && (issues.length > 0 || hasErrors)
 
   const goToPart = useCallback((idx) => {
@@ -225,11 +227,11 @@ export default function ExamPreviewModal({
 
   const part = parts[partIndex]
   const { module, sectionIdx, section } = part
-  const partLabel    = getPartLabel(module, sectionIdx)
+  const partLabel = getPartLabel(module, sectionIdx)
   const currentAudio = section?.media?.find(m => m.type === 'audio')
-  const isReading    = module === 'reading'
-  const isWriting    = module === 'writing'
-  const isListening  = module === 'listening'
+  const isReading = module === 'reading'
+  const isWriting = module === 'writing'
+  const isListening = module === 'listening'
 
   const handleAudioToggle = () => {
     if (!audioRef.current || !currentAudio) return
@@ -255,7 +257,7 @@ export default function ExamPreviewModal({
               onClick={() => setShowIssues(v => !v)}
             >
               {errorCount > 0 && <span className="epv-count-chip epv-count-chip--error">{errorCount} error{errorCount !== 1 ? 's' : ''}</span>}
-              {warnCount  > 0 && <span className="epv-count-chip epv-count-chip--warn">{warnCount} warning{warnCount !== 1 ? 's' : ''}</span>}
+              {warnCount > 0 && <span className="epv-count-chip epv-count-chip--warn">{warnCount} warning{warnCount !== 1 ? 's' : ''}</span>}
               {panelVisible ? '▲ Hide' : '▼ Show'}
             </button>
           )}
@@ -387,14 +389,19 @@ export default function ExamPreviewModal({
                   )}
                   <div style={{ pointerEvents: 'none' }}>
                     {(section.questions || []).length > 0
-                      ? section.questions.map((q, i) => (
+                      ? section.questions.map((q, i) => {
+                        const prevQ = i > 0 ? section.questions[i - 1] : null;
+                        const hideInst = prevQ && prevQ.instructionText && prevQ.instructionText === q.instructionText;
+                        return (
                           <div key={i} className="ip-question-block">
                             <QuestionRenderer
                               type={q.type} data={q} value={{}} onChange={NOOP}
                               qNumber={q.startNumber ?? q.questionNumber}
+                              hideInstruction={hideInst}
                             />
                           </div>
-                        ))
+                        );
+                      })
                       : <div className="ip-empty-section epv-empty-section">No questions added yet.</div>
                     }
                   </div>
@@ -416,14 +423,19 @@ export default function ExamPreviewModal({
                   </div>
                   <div className="ip-questions-col" style={{ pointerEvents: 'none' }}>
                     {(section.questions || []).length > 0
-                      ? section.questions.map((q, i) => (
+                      ? section.questions.map((q, i) => {
+                        const prevQ = i > 0 ? section.questions[i - 1] : null;
+                        const hideInst = prevQ && prevQ.instructionText && prevQ.instructionText === q.instructionText;
+                        return (
                           <div key={i} className="ip-question-block">
                             <QuestionRenderer
                               type={q.type} data={q} value={{}} onChange={NOOP}
                               qNumber={q.startNumber ?? q.questionNumber}
+                              hideInstruction={hideInst}
                             />
                           </div>
-                        ))
+                        );
+                      })
                       : <div className="ip-empty-section epv-empty-section">No questions added yet.</div>
                     }
                   </div>
