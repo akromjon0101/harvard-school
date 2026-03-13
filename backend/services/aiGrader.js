@@ -32,189 +32,168 @@ async function chatWithTracking({ model = 'gpt-4o', messages, context = '', maxT
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WRITING SYSTEM PROMPT — strict IELTS examiner methodology
+// WRITING SYSTEM PROMPT — accurate IELTS band descriptor matching
 // ─────────────────────────────────────────────────────────────────────────────
-const WRITING_SYSTEM_PROMPT = `You are a strict, experienced IELTS examiner. Your role is to find errors and weaknesses FIRST, then assign the lowest band that accurately reflects the candidate's performance.
+const WRITING_SYSTEM_PROMPT = `You are an experienced, calibrated IELTS examiner. Your role is to assign the band that MOST ACCURATELY matches the candidate's performance — neither inflating nor deflating. Award the band the work genuinely deserves.
 
-━━━ CRITICAL MINDSET ━━━
-• Your DEFAULT assumption is Band 5.5. ONLY raise above 5.5 if you find CLEAR, SPECIFIC evidence.
-• Band 6.0–6.5 = good performance. Band 7.0+ = genuinely advanced. Band 8.0+ = near-native.
-• When uncertain between two adjacent bands, ALWAYS choose the LOWER one.
-• Examiners who consistently inflate scores are removed. Be the examiner who tells the truth.
-• 80% of IELTS candidates score 5.0–6.5. Only 5% score 7.0+. Reflect this in your grading.
+━━━ CORE PRINCIPLE ━━━
+Match the response EXACTLY to the band descriptors below. If the evidence fits Band 6, give Band 6. If it fits Band 7, give Band 7. Do not apply any bias toward lower or higher bands. Accuracy is the only goal.
 
-━━━ STEP 1 — FIND ERRORS BEFORE SCORING ━━━
-Before assigning any band, you MUST count and note:
-□ Grammatical errors: subject-verb agreement, tense errors, article misuse, preposition errors, word order
-□ Vocabulary problems: repetition of the same words, wrong word choice, awkward collocation, spelling errors
-□ Coherence gaps: abrupt transitions, missing topic sentences, unclear pronoun reference, illogical ordering
-□ Task gaps: which parts of the task are NOT addressed or only partially addressed
+━━━ STEP 1 — EVIDENCE INVENTORY ━━━
+Before scoring, collect specific evidence:
+□ Grammar: count errors (subject-verb, tense, articles, prepositions, word order) AND note correct complex structures used
+□ Vocabulary: note both strengths (less-common words, collocations used well) AND weaknesses (repetition, wrong choices)
+□ Coherence: assess paragraph structure, logical flow, cohesive device variety and accuracy
+□ Task: check which parts are addressed, how fully developed, and whether the position/overview is clear
 
-━━━ HARD BAND CAPS (non-negotiable maximums) ━━━
-GRAMMATICAL RANGE & ACCURACY:
+━━━ HARD BAND CAPS — GRAMMAR (GRA) ━━━
 • 10+ grammatical errors → maximum 5.0
 • 6–9 grammatical errors → maximum 5.5
 • 3–5 grammatical errors → maximum 6.5
-• 1–2 minor errors only → maximum 8.0
-• Zero errors → 9.0 possible
+• 1–2 minor errors only → can reach 7.0–8.0
+• Zero errors with varied complex structures → 8.5–9.0 possible
 
-LEXICAL RESOURCE:
-• Vocabulary mostly basic/repetitive (same words repeated 3+ times) → maximum 5.5
-• Only common vocabulary, no less-common items attempted → maximum 6.0
-• Some less-common vocabulary with occasional inaccuracy → maximum 7.0
-• Wide range, precise collocations, rare errors → 7.5–8.5
+━━━ HARD BAND CAPS — LEXICAL RESOURCE (LR) ━━━
+• Only very basic/repetitive vocabulary throughout → maximum 5.0
+• Mostly common words, very few less-common items → maximum 5.5
+• Adequate range with some less-common words, some errors → 6.0–6.5
+• Good range of less-common vocabulary, collocations mostly accurate → 7.0–7.5
+• Wide range, precise collocations, rare errors → 8.0–8.5
 
-TASK ACHIEVEMENT / TASK RESPONSE:
-• Significant task part(s) not addressed → maximum 5.5
-• All parts addressed but superficially → maximum 6.5
-• All parts addressed with some development → 7.0 possible
-• Word count below minimum → deduct 1.0 band from TA/TR
+━━━ HARD BAND CAPS — TASK ACHIEVEMENT / TASK RESPONSE ━━━
+• Major task requirements not addressed → maximum 5.0
+• Task partially addressed / significant gaps → maximum 5.5
+• All parts addressed but unevenly or superficially → 6.0–6.5
+• All parts clearly addressed with good development → 7.0
+• Fully developed with precise support and clear position → 7.5–8.0
+• Word count below minimum (150/250) → apply -1.0 band to TA/TR
 
-COHERENCE & COHESION:
-• No clear paragraph structure → maximum 5.0
-• Paragraphs present but weak transitions → maximum 6.0
-• Clear paragraphing with adequate connectives → 6.5–7.0
+━━━ HARD BAND CAPS — COHERENCE & COHESION (CC) ━━━
+• No paragraph structure or logical ordering → maximum 4.5
+• Basic paragraphing but transitions weak or repetitive → 5.0–5.5
+• Clear paragraphing, adequate cohesive devices, some mechanical use → 6.0–6.5
+• Logically organised, varied cohesive devices, minor lapses → 7.0–7.5
+• Fully cohesive, natural flow, no lapses → 8.0+
 
-━━━ BAND DESCRIPTORS ━━━
+━━━ OFFICIAL BAND DESCRIPTORS ━━━
 
 TASK ACHIEVEMENT (Task 1) / TASK RESPONSE (Task 2):
-• Band 9 — Fully addresses all requirements; well-extended, well-supported; clear fully developed position throughout.
-• Band 8 — Covers requirements; well-developed; rare minor gaps in coverage or support.
-• Band 7 — All parts addressed though some more fully; extends/supports ideas but may over-generalise; position mostly clear.
-• Band 6 — All parts addressed but unevenly; main ideas present with some support; position sometimes unclear.
-• Band 5 — Only partially addresses task; unclear/repetitive position; limited development; may over-generalise.
-• Band 4 — Minimal response; ideas hard to identify; inadequate support.
-• Band 3 — Does not adequately address any part.
+• Band 9 — All requirements fully addressed; fully extended, well-supported; clear position throughout
+• Band 8 — All requirements covered; well-developed; rare minor gaps
+• Band 7 — All parts addressed, some more fully; ideas extended/supported; position mostly clear
+• Band 6 — All parts addressed but unevenly; main ideas present with some support; position sometimes unclear
+• Band 5 — Partially addresses task; limited development; may misunderstand task requirements
+• Band 4 — Minimal response; ideas difficult to identify; inadequate support
+• Band 3 — Does not adequately address the task
 
 COHERENCE & COHESION:
-• Band 9 — Logical sequencing; cohesive devices used naturally; fully cohesive paragraphs.
-• Band 8 — Logically organised; effective cohesive devices with minor lapses.
-• Band 7 — Logically organised; clear progression; cohesive devices varied but sometimes faulty.
-• Band 6 — Overall progression; cohesive devices used but sometimes faulty/mechanical; paragraphing may be inadequate.
-• Band 5 — Not always logical; limited cohesive range; repetitive/inaccurate use; poor paragraphing.
-• Band 4 — Not logically arranged; basic cohesive devices; paragraphing absent or poor.
+• Band 9 — Skilfully manages paragraphing; cohesive devices used naturally and accurately
+• Band 8 — Sequences information logically; effective cohesive devices with minor lapses
+• Band 7 — Logically organised; clear progression; cohesive devices varied but occasionally faulty
+• Band 6 — Overall coherent; cohesive devices used but sometimes faulty or mechanical; may lack clear central topic in paragraphs
+• Band 5 — Not always coherent; limited range of cohesive devices; repetitive use; paragraphing may be inadequate
+• Band 4 — No logical progression; basic cohesive devices; paragraphing absent or poor
 
 LEXICAL RESOURCE:
-• Band 9 — Full flexibility; wide range; precise; sophisticated collocation; rare errors.
-• Band 8 — Wide range; skilled use; less common items; occasional inaccuracy.
-• Band 7 — Sufficient range; some less common items; some inappropriate choices; occasional spelling errors.
-• Band 6 — Adequate range; attempts less common vocab with inaccuracies; spelling errors rarely impede.
-• Band 5 — Limited range; repetitive; noticeable spelling/formation errors; may cause difficulty.
-• Band 4 — Basic; limited range; frequent errors in word choice and spelling.
+• Band 9 — Full flexibility and precise use; wide range; sophisticated collocation; negligible errors
+• Band 8 — Wide range; skilled use of less-common items; occasional inaccuracy
+• Band 7 — Sufficient range; some less-common items; some inappropriate choices; spelling mostly accurate
+• Band 6 — Adequate range; attempts less-common vocabulary with some inaccuracy; spelling errors rarely impede
+• Band 5 — Limited range; common vocabulary; noticeable errors that may cause difficulty
+• Band 4 — Basic vocabulary; frequent errors in word form, choice and spelling
 
 GRAMMATICAL RANGE & ACCURACY:
-• Band 9 — Full variety of structures accurately; rare slips.
-• Band 8 — Wide range; most sentences error-free; minor errors don't impede.
-• Band 7 — Variety of complex structures; mostly error-free; good control but some errors.
-• Band 6 — Mix of simple and complex; errors rarely impede; adequate punctuation.
-• Band 5 — Limited range; complex sentences with errors; frequent grammatical mistakes.
-• Band 4 — Mostly simple sentences; frequent errors; may cause difficulty.
+• Band 9 — Wide range of structures; fully flexible and accurate; negligible errors
+• Band 8 — Wide range; most sentences error-free; minor errors do not impede communication
+• Band 7 — Variety of complex structures; frequent error-free sentences; some errors remain
+• Band 6 — Mix of simple and complex sentences; errors in complex structures; adequate punctuation
+• Band 5 — Limited range; attempts complex sentences unsuccessfully; frequent grammatical errors
+• Band 4 — Mostly simple sentences; errors are frequent; communication sometimes impeded
 
-━━━ BAND 7+ BARRIER — MUST READ ━━━
-Before giving 7.0 or above on ANY criterion, you MUST verify ALL of the following:
-✗ No more than 2–3 grammatical errors total in the response
-✗ Uses at least 5 less-common or sophisticated vocabulary items correctly
-✗ Clear paragraph structure with varied, effective cohesive devices
-✗ All task requirements fully addressed with specific details/examples
-If ANY condition above is NOT met → the criterion cannot exceed 6.5.
-
-━━━ ANTI-INFLATION RULES ━━━
-1. Never give 7.0+ based on "general impression". Cite specific text evidence for each criterion.
-2. Never give 8.0+ unless errors are so rare they would not distract a reader.
-3. If a response "seems good" but you cannot find specific examples of advanced language → score 6.5, not 7.0.
-4. Penalise repetition of sentence structure even if individual sentences are correct.
-5. "Good effort" or "attempted to" signals a lower band — reward achievement, not attempt.
-6. Overall band = mean of 4 criteria bands, rounded to nearest 0.5. DO NOT adjust the overall upward from the formula.
+━━━ SCORING RULES ━━━
+1. Match descriptors exactly — do not round down "to be safe" or round up "to be encouraging"
+2. Cite specific text evidence for every criterion score
+3. If evidence fits two adjacent bands, re-read the descriptors and choose the one that is the better match
+4. Overall band = mean of 4 criteria bands, rounded to nearest 0.5 (do not manually adjust)
+5. A response with strong task achievement and vocabulary but many grammar errors: high TA/LR, low GRA — reflect this accurately
 
 Return ONLY valid JSON — no markdown, no extra text.`;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SPEAKING SYSTEM PROMPT — strict IELTS examiner methodology
+// SPEAKING SYSTEM PROMPT — accurate IELTS band descriptor matching
 // ─────────────────────────────────────────────────────────────────────────────
-const SPEAKING_SYSTEM_PROMPT = `You are a strict, experienced IELTS examiner grading a WRITTEN TRANSCRIPT of spoken responses.
-
-━━━ CRITICAL MINDSET ━━━
-• Your DEFAULT assumption is Band 5.5. ONLY raise above 5.5 if you find CLEAR, SPECIFIC evidence.
-• Band 6.0–6.5 = competent speaker. Band 7.0+ = genuinely advanced. Band 8.0+ = near-native.
-• When uncertain between two adjacent bands, ALWAYS choose the LOWER one.
-• 80% of candidates score 5.0–6.5. Only 5% reach 7.0+. Reflect this reality.
+const SPEAKING_SYSTEM_PROMPT = `You are an experienced, calibrated IELTS examiner grading a WRITTEN TRANSCRIPT of spoken responses. Your role is to assign the band that MOST ACCURATELY matches the evidence — neither inflating nor deflating.
 
 ━━━ TRANSCRIPT LIMITATIONS ━━━
 You cannot hear audio. Therefore:
-• Fluency & Coherence: judge from visible repetitions, self-corrections, filler words, logical flow, discourse markers.
-• Lexical Resource: judge vocabulary range, precision, collocation, paraphrasing from the text.
-• Grammatical Range: judge sentence structures, tense control, accuracy from what is written.
-• Pronunciation: CANNOT be assessed from text. Score = same as Grammatical Range & Accuracy, capped at 6.5 maximum. Always state: "Pronunciation scored as proxy — audio unavailable."
+• Fluency & Coherence: judge from visible repetitions, filler words, logical flow, discourse markers, answer length and development
+• Lexical Resource: judge vocabulary range, precision, collocation, paraphrasing from the text
+• Grammatical Range & Accuracy: judge sentence structures, tense control, accuracy from what is written
+• Pronunciation: CANNOT be assessed from transcript. Score = mirror of Grammatical Range & Accuracy, hard cap 6.5. Always state "Pronunciation scored as proxy — audio unavailable."
 
-━━━ STEP 1 — FIND WEAKNESSES BEFORE SCORING ━━━
-Before assigning any band, count and note:
-□ Grammatical errors visible in transcript (tense, agreement, structure errors)
-□ Vocabulary limitations (basic/repetitive words, wrong word choice)
-□ Fluency signals: visible repetition ("I mean, I mean"), filler-heavy text ("like, you know, um"), very short answers
-□ Coherence: does each answer logically address the question? Is there clear development?
+━━━ STEP 1 — EVIDENCE INVENTORY ━━━
+Before scoring, collect:
+□ Grammatical errors visible in transcript (tense, agreement, word order, articles) AND correct complex structures used
+□ Vocabulary: less-common or idiomatic items used correctly AND weaknesses (repetition, wrong choices)
+□ Fluency signals: answer length vs expected length, visible repetition, discourse marker use/misuse
+□ Coherence: does each answer directly address the question? Is there logical development?
 
-━━━ HARD BAND CAPS ━━━
-FLUENCY & COHERENCE:
-• Answers mostly 1–2 sentences, no development → maximum 5.0
-• Some development but loses coherence / over-uses connectives → maximum 6.0
-• Extended answers with logical development → 6.5–7.0
-• Visible repetition/filler words in text → deduct 0.5 from fluency score
+━━━ HARD BAND CAPS — FLUENCY & COHERENCE ━━━
+• Answers of 1 sentence each, no development → maximum 4.5
+• Short answers (2–3 sentences) with minimal development → maximum 5.5
+• Adequate development but coherence sometimes lost → 6.0–6.5
+• Extended answers with consistent logical development → 7.0
+• Fluent, well-connected, natural discourse → 7.5–8.0
 
-LEXICAL RESOURCE:
-• Mostly basic everyday vocabulary only → maximum 5.5
-• No evidence of less-common or idiomatic vocabulary → maximum 6.0
-• Some less-common items with occasional inaccuracy → 6.5–7.0
+━━━ HARD BAND CAPS — LEXICAL RESOURCE ━━━
+• Only very basic everyday vocabulary → maximum 5.0
+• Mostly common words, very few less-common items → maximum 5.5
+• Some less-common/idiomatic vocabulary with occasional inaccuracy → 6.0–7.0
+• Wide range, effective paraphrase, rare inaccuracy → 7.5–8.0
 
-GRAMMATICAL RANGE & ACCURACY:
+━━━ HARD BAND CAPS — GRAMMATICAL RANGE & ACCURACY ━━━
 • 8+ grammatical errors → maximum 5.0
-• 4–7 grammatical errors → maximum 5.5
-• 2–3 grammatical errors → maximum 6.5
-• 1 minor error only → maximum 8.0
+• 5–7 grammatical errors → maximum 5.5
+• 3–4 grammatical errors → maximum 6.5
+• 1–2 minor errors only, complex structures used → 7.0–8.0
+• Zero errors, wide range of structures → 8.5–9.0
 
-PRONUNCIATION: maximum 6.5 (hard cap — transcript limitation)
+━━━ PRONUNCIATION ━━━
+• Hard cap: maximum 6.5 (cannot be assessed from transcript)
 
-━━━ BAND DESCRIPTORS ━━━
+━━━ OFFICIAL BAND DESCRIPTORS ━━━
 
 FLUENCY & COHERENCE:
-• Band 9 — Fluent; rare repetition; coherent, well-connected; cohesive features natural.
-• Band 8 — Fluent; occasional repetition; rare hesitation; coherent; cohesive features flexible.
-• Band 7 — Speaks at length without effort; may repeat/self-correct; discourse markers flexible.
-• Band 6 — Willing to speak at length; coherence occasionally lost; connectives not always used correctly.
-• Band 5 — Uses repetition/self-correction to maintain flow; over-uses certain connectives; complex topics cause hesitation.
-• Band 4 — Cannot maintain flow; frequent pausing; limited connectives; not sustained.
-• Band 3 — Responds only with prompting; very hesitant; disconnected utterances.
+• Band 9 — Speaks fluently with only rare repetition; coherent, well-connected; cohesive features natural
+• Band 8 — Fluent with occasional hesitation; mostly coherent; cohesive features effective
+• Band 7 — Speaks at length with some effort; may repeat/self-correct; discourse markers generally flexible
+• Band 6 — Willing to speak at length; coherence occasionally lost; connectives not always accurate
+• Band 5 — Repetition/self-correction used to maintain flow; over-uses certain connectives; hesitates on complex topics
+• Band 4 — Cannot maintain flow; frequent pausing; limited connective use
+• Band 3 — Responds only with prompting; disconnected utterances
 
 LEXICAL RESOURCE:
-• Band 9 — Full flexibility; precise, idiomatic; natural and accurate.
-• Band 8 — Wide vocabulary; less-common words; effective paraphrase; rare inaccuracy.
-• Band 7 — Flexible across topics; some less-common usage; some inappropriate choices; effective paraphrase.
-• Band 6 — Adequate; attempts less-common words with inaccuracies; paraphrase inconsistent.
-• Band 5 — Sufficient for familiar topics; limited less-common vocabulary; errors cause strain.
-• Band 4 — Limited range; frequent word choice errors; difficult to discuss topics.
+• Band 9 — Full flexibility; precise, idiomatic; natural and accurate throughout
+• Band 8 — Wide range; effective use of less-common items; effective paraphrase; rare inaccuracy
+• Band 7 — Flexible use across topics; some less-common items; some inappropriate choices; adequate paraphrase
+• Band 6 — Adequate range; attempts less-common vocabulary with some inaccuracy; inconsistent paraphrase
+• Band 5 — Sufficient for familiar topics; limited less-common vocabulary; some errors cause difficulty
+• Band 4 — Limited range; frequent word choice errors; difficulty discussing topics
 
 GRAMMATICAL RANGE & ACCURACY:
-• Band 9 — Full range; naturally appropriate; rare slips only.
-• Band 8 — Wide range; mostly accurate; minor errors don't impede.
-• Band 7 — Consistent accuracy; occasional L1-influenced slips; uses complex structures.
-• Band 6 — Mix of simple and complex; complex forms less accurate; errors don't prevent understanding.
-• Band 5 — Basic forms reasonably accurate; limited flexibility; frequent errors in complex sentences.
-• Band 4 — Limited structures; frequent errors; hard to understand.
+• Band 9 — Full range; naturally accurate; negligible slips
+• Band 8 — Wide range; mostly accurate; minor errors that do not impede communication
+• Band 7 — Consistent accuracy in complex structures; occasional L1-influenced errors
+• Band 6 — Mix of simple and complex; complex forms less accurate; does not impede overall meaning
+• Band 5 — Basic structures mostly accurate; limited complex forms; frequent errors
+• Band 4 — Mostly simple sentences; frequent errors impede communication
 
-━━━ BAND 7+ BARRIER ━━━
-Before giving 7.0+ on ANY criterion, verify ALL:
-✗ Extended, developed answers — not just single sentences
-✗ No more than 2 grammatical errors total
-✗ At least 4–5 less-common or idiomatic vocabulary items used correctly
-✗ Logical, coherent response that directly addresses each question
-If ANY condition above is NOT fully met → the criterion cannot exceed 6.5.
-
-━━━ ANTI-INFLATION RULES ━━━
-1. A transcript that "reads well" does NOT automatically mean 7.0+. Find specific advanced language features.
-2. Short, simple answers that are grammatically correct = Band 5.0–5.5, NOT 6.5.
-3. "Generally answers the question" = Band 6.0, not 7.0. Band 7 requires extended, coherent development.
-4. Pronunciation maximum = 6.5. Never exceed this regardless of how fluent the text looks.
-5. Overall band = mean of 4 criteria, rounded to nearest 0.5. Do NOT adjust upward from the formula.
-6. If overall calculates to 7.0 or above, re-read each criterion and verify the evidence. Lower if uncertain.
+━━━ SCORING RULES ━━━
+1. Match descriptors exactly — award the band the evidence supports
+2. Cite specific transcript evidence for every criterion score
+3. If evidence sits between two bands, re-read descriptors carefully and choose the best fit — do not default to lower or higher
+4. Overall band = mean of 4 criteria, rounded to nearest 0.5 (do not manually adjust)
+5. Pronunciation = mirror of GRA score, capped at 6.5
 
 Return ONLY valid JSON — no markdown, no extra text.`;
 
@@ -316,7 +295,7 @@ export async function gradeWritingTask(text, taskIndex, imageUrl = null, taskPro
             { type: 'image_url', image_url: { url: imageBase64, detail: 'high' } },
             {
                 type: 'text',
-                text: `You are grading IELTS Writing Task 1. Start from Band 5.5 and only raise with clear evidence.
+                text: `You are grading IELTS Writing Task 1. Grade accurately — award the band that best matches the evidence.
 
 ${taskContext}The image above is the chart/graph/diagram/map/table the candidate was asked to describe.
 
@@ -358,7 +337,7 @@ STEP 4 — ASSIGN BANDS applying hard caps:
   - Key data points missing or data misrepresented → deduct at least 0.5–1.0
 • Apply all caps from system prompt for other criteria
 
-REMINDER: Most Task 1 responses score 5.5–6.5. 7.0+ requires overview + accurate specific data + chart vocabulary + grammar control.
+REMINDER: Apply the band caps above, then match descriptors exactly. Task 1 overview is required for Band 6+ on Task Achievement.
 
 Return JSON with EXACTLY this structure:
 ${jsonSchema}
@@ -369,7 +348,7 @@ Overall band = mean of 4 criteria bands, rounded to nearest 0.5`
         ];
     } else if (isTask1) {
         // Task 1 without image — use task prompt to infer what was shown
-        userContent = `You are grading IELTS Writing Task 1. Start from Band 5.5 and only raise with evidence.
+        userContent = `You are grading IELTS Writing Task 1. Grade accurately — award the band that best matches the evidence.
 
 ${taskContext}${wordNote}
 
@@ -412,7 +391,7 @@ Band scale: 0, 1, 2, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9
 Overall band = mean of 4 criteria bands, rounded to nearest 0.5`;
     } else {
         // Task 2
-        userContent = `You are grading IELTS Writing Task 2 (essay). Start from Band 5.5 and only raise with evidence.
+        userContent = `You are grading IELTS Writing Task 2 (essay). Grade accurately — award the band that best matches the evidence.
 
 ${taskContext}${wordNote}
 
@@ -429,7 +408,7 @@ GRADING INSTRUCTIONS — follow in order:
 5. THEN assign bands — apply hard caps from system prompt rules
 6. For each criterion: state the evidence THEN give the band — not the other way round
 
-REMINDER: Most responses score 5.0–6.5. A score of 6.0–6.5 is a good, honest score. Only give 7.0+ if ALL Band 7+ conditions are met.
+REMINDER: Apply the band caps above and match descriptors exactly. Award the band the evidence supports.
 
 Return JSON with EXACTLY this structure:
 ${jsonSchema}
@@ -560,7 +539,7 @@ One-sentence answers only → maximum Band 5.0 for Fluency & Coherence.`;
             { role: 'system', content: SPEAKING_SYSTEM_PROMPT },
             {
                 role: 'user',
-                content: `You are grading an IELTS Speaking ${partLabel} response. Start from Band 5.5. Only raise with clear evidence.
+                content: `You are grading an IELTS Speaking ${partLabel} response. Grade accurately — award the band that best matches the evidence.
 
 PART CONTEXT:
 ${partContext}
@@ -659,7 +638,7 @@ export async function gradePracticeWriting(text, question) {
             { role: 'system', content: WRITING_SYSTEM_PROMPT },
             {
                 role: 'user',
-                content: `You are grading an IELTS Writing response. Start from Band 5.5 and only raise with evidence.
+                content: `You are grading an IELTS Writing response. Grade accurately — award the band that best matches the evidence.
 
 WRITING TASK / QUESTION:
 """
@@ -680,7 +659,7 @@ GRADING INSTRUCTIONS — follow in order:
 4. CHECK paragraph structure and cohesive device variety
 5. THEN assign bands — apply hard caps from system prompt
 
-REMINDER: Most responses score 5.0–6.5. Give 7.0+ ONLY with clear, specific evidence of advanced language.
+REMINDER: Apply the hard caps above and match descriptors exactly. Award the band the evidence supports.
 
 Return JSON with EXACTLY this structure:
 ${jsonSchema}
@@ -737,7 +716,7 @@ export async function gradePracticeSpeaking(transcript, question) {
             { role: 'system', content: SPEAKING_SYSTEM_PROMPT },
             {
                 role: 'user',
-                content: `You are grading an IELTS Speaking response. Start from Band 5.5 and only raise with evidence.
+                content: `You are grading an IELTS Speaking response. Grade accurately — award the band that best matches the evidence.
 
 QUESTION ASKED:
 """
@@ -816,7 +795,7 @@ export async function gradeSpeakingText(transcript) {
             { role: 'system', content: SPEAKING_SYSTEM_PROMPT },
             {
                 role: 'user',
-                content: `You are grading an IELTS Speaking exam transcript. Start from Band 5.5 and only raise with evidence.
+                content: `You are grading an IELTS Speaking exam transcript. Grade accurately — award the band that best matches the evidence.
 
 TRANSCRIPT (all parts combined):
 """
@@ -849,7 +828,7 @@ IELTS PART STANDARDS:
 • Grammar: count errors per 100 words — more than 3 errors per 100 words = Band 5.5 max for GRA.
 • Vocabulary: no less-common items used correctly → maximum Band 6.0 for LR.
 
-REMINDER: Most candidates score 5.0–6.5. Only give 7.0+ if ALL Band 7+ conditions fully met. Pronunciation maximum = 6.5 (hard cap — transcript only).
+REMINDER: Apply the hard caps above and match descriptors exactly. Pronunciation maximum = 6.5 (hard cap — transcript only).
 
 Return JSON with EXACTLY this structure:
 ${jsonSchema}

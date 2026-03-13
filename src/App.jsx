@@ -12,20 +12,16 @@ const Speaking        = lazy(() => import('./pages/Speaking'))
 const Dashboard       = lazy(() => import('./pages/Dashboard'))
 const MyResults       = lazy(() => import('./pages/MyResults'))
 const IELTSExamPage   = lazy(() => import('./pages/IELTSExamPage'))
-const AnswerSheet     = lazy(() => import('./pages/AnswerSheet'))
 const IELTSTRF        = lazy(() => import('./pages/IELTSTRF'))
 const StudentReadingPage = lazy(() => import('./pages/StudentReadingPage'))
 const PracticeGrader  = lazy(() => import('./pages/PracticeGrader'))
 const AdminDashboard  = lazy(() => import('./pages/admin/AdminDashboard'))
-const AdminSubmissions = lazy(() => import('./pages/admin/AdminSubmissions'))
+const AdminSubmissions = lazy(() => import('./pages/admin/AdminSubmissions').then(m => { import('./styles/admin-submissions.css'); return m }))
 const AdminExams      = lazy(() => import('./pages/admin/AdminExams'))
-const AdminUsers      = lazy(() => import('./pages/admin/AdminUsers'))
-const TestCreator     = lazy(() => import('./pages/admin/TestCreator'))
+const AdminUsers      = lazy(() => import('./pages/admin/AdminUsers').then(m => { import('./styles/admin-users.css'); return m }))
+const TestCreator     = lazy(() => import('./pages/admin/TestCreator').then(m => { import('./styles/test-creator.css'); return m }))
+const AnswerSheet     = lazy(() => import('./pages/AnswerSheet').then(m => { import('./styles/answer-sheet.css'); return m }))
 import './App.css'
-import './styles/admin-users.css'
-import './styles/test-creator.css'
-import './styles/answer-sheet.css'
-import './styles/admin-submissions.css'
 
 // Routes where navbar should be hidden (full-screen exam experience)
 const HIDE_NAV_PATTERNS = [/^\/exam\//, /^\/reading-session\//]

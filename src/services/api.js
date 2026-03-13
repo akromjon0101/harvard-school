@@ -1,6 +1,11 @@
 // src/services/api.js
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
 
+// Ping server on app load to wake up Railway from sleep
+if (typeof window !== 'undefined') {
+  fetch(`${BASE_URL}/health`, { method: 'GET' }).catch(() => {})
+}
+
 export const api = async (endpoint, method = 'GET', body) => {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method, 
