@@ -224,6 +224,22 @@ Return ONLY valid JSON — no markdown, no extra text.`;
 export async function gradeWritingTask(text, taskIndex, imageUrl = null, taskPrompt = '') {
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
 
+    const wordCount0 = text?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+    if (wordCount0 < 10) {
+        return {
+            band: 0, wordCount: wordCount0,
+            criteria: {
+                taskAchievement:   { band: 0, comment: 'No meaningful response submitted.' },
+                coherenceCohesion: { band: 0, comment: 'No meaningful response submitted.' },
+                lexicalResource:   { band: 0, comment: 'No meaningful response submitted.' },
+                grammaticalRange:  { band: 0, comment: 'No meaningful response submitted.' },
+            },
+            strengths: [], weaknesses: ['No meaningful response submitted.'],
+            improvementAdvice: ['Write at least 150 words for Task 1 or 250 words for Task 2.'],
+            feedback: 'No valid writing response detected.',
+        };
+    }
+
     const isTask1   = taskIndex === 0;
     const hasImage  = isTask1 && imageUrl && imageUrl.startsWith('http');
     const taskLabel = isTask1
@@ -438,16 +454,48 @@ Overall band = mean of 4 criteria bands, rounded to nearest 0.5`;
 // ─────────────────────────────────────────────────────────────────────────────
 // Speaking grader WITH question context + part awareness (Part 1 / 2 / 3)
 // ─────────────────────────────────────────────────────────────────────────────
+// Returns a zero-band result without calling AI
+function emptyBandResult(reason, partLabel = '') {
+    const zero = { band: 0, comment: reason };
+    return {
+        band: 0,
+        questionAnalysis: `${partLabel} — no meaningful response`,
+        relevanceCheck: reason,
+        criteria: {
+            fluencyCoherence: zero,
+            lexicalResource:  zero,
+            grammaticalRange: zero,
+            pronunciation:    zero,
+        },
+        strengths: [],
+        weaknesses: [reason],
+        improvementAdvice: ['Provide a spoken response of at least 2-3 sentences per question.'],
+        feedback: reason,
+    };
+}
+
 export async function gradeSpeakingWithContext(transcript, partLabel = 'Part 1', questions = []) {
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
+
+    // Hard guard: reject empty / near-empty transcripts before calling AI
+    const wordCount = transcript?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+    if (wordCount < 5) {
+        return emptyBandResult('No valid spoken response detected (fewer than 5 words).', partLabel);
+    }
 
     const isP2 = /part\s*2/i.test(partLabel);
     const isP3 = /part\s*3/i.test(partLabel);
 
     const partContext = isP2
         ? `${partLabel} — Cue Card (long-turn monologue).
-Expected: 1–2 minute uninterrupted speech (≈120–240 words) covering ALL cue card bullet points.
-Cap: fewer than 120 words → Fluency maximum 5.0. Failure to cover key cue points → Task Relevance noted.`
+Expected: ~2 minutes of uninterrupted speech (≈200–240 words) covering ALL cue card bullet points.
+Duration caps for Fluency & Coherence (MANDATORY — apply BEFORE any other assessment):
+• fewer than 60 words  (< ~30 sec) → Fluency maximum 3.0
+• fewer than 120 words (< ~1 min)  → Fluency maximum 4.0
+• fewer than 180 words (< ~1.5 min)→ Fluency maximum 5.0
+• fewer than 220 words (< ~2 min)  → Fluency maximum 5.5
+• 220+ words (~2 min)              → no length cap — assess purely on quality
+Failure to cover all cue card bullet points → deduct 0.5 from Fluency & Coherence.`
         : isP3
         ? `${partLabel} — Abstract Discussion.
 Expected: Extended, analytical answers showing ability to speculate, compare, evaluate.
@@ -460,7 +508,7 @@ One-sentence answers only → maximum Band 5.0 for Fluency & Coherence.`;
         ? `\nQUESTIONS ASKED IN THIS PART:\n${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n`
         : '';
 
-    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+    const transcriptWordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
 
     const jsonSchema = `{
   "band": 6.0,
@@ -478,13 +526,14 @@ One-sentence answers only → maximum Band 5.0 for Fluency & Coherence.`;
   "feedback": "3-4 sentence examiner summary for ${partLabel}: one strength, one main weakness, one specific suggestion"
 }`;
 
-    // Part 2 word cap enforcement (backend safeguard)
+    // Part 2 word cap enforcement — backend safeguard (~2 min average = ~200–240 words)
     let part2FluencyCap = null;
     if (isP2) {
-        if (wordCount < 60)       part2FluencyCap = 4.5;
-        else if (wordCount < 100) part2FluencyCap = 5.0;
-        else if (wordCount < 150) part2FluencyCap = 5.5;
-        else if (wordCount < 200) part2FluencyCap = 6.5;
+        if (wordCount < 60)       part2FluencyCap = 3.0;   // < 30 sec
+        else if (wordCount < 120) part2FluencyCap = 4.0;   // < 1 min
+        else if (wordCount < 180) part2FluencyCap = 5.0;   // < 1.5 min
+        else if (wordCount < 220) part2FluencyCap = 5.5;   // < 2 min
+        // 220+ words → no cap
     }
 
     const response = await chatWithTracking({
@@ -505,7 +554,9 @@ ${transcript}
 """
 
 GRADING INSTRUCTIONS — follow in order:
-1. CHECK question relevance — does each answer directly address the question asked? Flag irrelevant/missing answers.
+1. CHECK question relevance FIRST — does each answer directly address the question asked?
+   • Completely off-topic (speaking about unrelated subjects, reciting memorized text, random content): Fluency & Coherence maximum 2.0, Lexical Resource maximum 3.0. Write "OFF-TOPIC" in relevanceCheck.
+   • Partially off-topic or only tangentially relevant: maximum Band 4.0 for Fluency & Coherence.
 2. CHECK response length vs expected (see part context above) — apply Fluency cap if too short
 3. COUNT all grammatical errors (list specific examples in your comment)
 4. ASSESS vocabulary: any less-common items? Repetition? Wrong choices?
@@ -534,6 +585,24 @@ Overall band = mean of 4 criteria, rounded to nearest 0.5`,
         // Enforce Part 2 word-count cap on fluency
         if (part2FluencyCap !== null && raw.criteria.fluencyCoherence?.band > part2FluencyCap) {
             raw.criteria.fluencyCoherence.band = part2FluencyCap;
+        }
+        // Hard cap for off-topic responses detected by AI
+        const isOffTopic = typeof raw.relevanceCheck === 'string' &&
+            /off.?topic|unrelated|irrelevant|did not address/i.test(raw.relevanceCheck);
+        if (isOffTopic) {
+            if (raw.criteria.fluencyCoherence?.band > 2.0) raw.criteria.fluencyCoherence.band = 2.0;
+            if (raw.criteria.lexicalResource?.band   > 3.0) raw.criteria.lexicalResource.band   = 3.0;
+            console.log(`[AI] Off-topic response detected for ${partLabel} — applying band caps`);
+        }
+        // Hard cap for very short transcripts (5–20 words)
+        if (wordCount < 10) {
+            for (const key of Object.keys(raw.criteria)) {
+                if (raw.criteria[key]?.band > 2.0) raw.criteria[key].band = 2.0;
+            }
+        } else if (wordCount < 20) {
+            for (const key of Object.keys(raw.criteria)) {
+                if (raw.criteria[key]?.band > 3.0) raw.criteria[key].band = 3.0;
+            }
         }
         const vals = Object.values(raw.criteria).map(c => c.band).filter(b => typeof b === 'number');
         if (vals.length > 0) raw.band = roundToHalf(vals.reduce((a, b) => a + b, 0) / vals.length);
@@ -623,6 +692,11 @@ Overall band = mean of 4 criteria bands, rounded to nearest 0.5`,
 export async function gradePracticeSpeaking(transcript, question) {
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
 
+    const wordCount = transcript?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+    if (wordCount < 5) {
+        return emptyBandResult('No valid spoken response detected (fewer than 5 words).');
+    }
+
     const jsonSchema = `{
   "band": 6.5,
   "questionAnalysis": "What the question required the candidate to say",
@@ -697,6 +771,11 @@ Overall band = mean of 4 criteria bands, rounded to nearest 0.5`,
 export async function gradeSpeakingText(transcript) {
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
 
+    const wordCount = transcript?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+    if (wordCount < 10) {
+        return emptyBandResult('No valid spoken response detected (fewer than 10 words in full exam).');
+    }
+
     const jsonSchema = `{
   "band": 6.5,
   "questionAnalysis": "Summary of what was expected from the candidate in this speaking task",
@@ -729,13 +808,13 @@ ${transcript}
 
 PART 2 DURATION CHECK (MANDATORY — do this first):
 Find the Part 2 section in the transcript and count its words.
-IELTS Part 2 requires speaking for 1–2 minutes (≈ 120–240 words at normal speaking pace).
+IELTS Part 2 requires ~2 minutes of speech (≈200–240 words at normal speaking pace).
 Apply this cap to Fluency & Coherence BEFORE anything else:
-• Part 2 fewer than 60 words  → Fluency & Coherence maximum 4.5 (failed to sustain speech)
-• Part 2 fewer than 100 words → Fluency & Coherence maximum 5.0 (too short, did not develop topic)
-• Part 2 fewer than 150 words → Fluency & Coherence maximum 5.5 (below expected length)
-• Part 2 150–200 words        → Fluency & Coherence maximum 6.5 (borderline, partial development)
-• Part 2 200+ words           → no length cap (assess purely on quality)
+• Part 2 fewer than 60 words  → Fluency & Coherence maximum 3.0 (< 30 sec — barely spoke)
+• Part 2 fewer than 120 words → Fluency & Coherence maximum 4.0 (< 1 min — very short)
+• Part 2 fewer than 180 words → Fluency & Coherence maximum 5.0 (< 1.5 min — below expected)
+• Part 2 fewer than 220 words → Fluency & Coherence maximum 5.5 (< 2 min — borderline)
+• Part 2 220+ words           → no length cap (assess purely on quality)
 
 GRADING INSTRUCTIONS — follow in order:
 1. EXTRACT Part 2 text and count its words → apply duration cap above
@@ -774,15 +853,25 @@ Overall band = mean of 4 criteria bands, rounded to nearest 0.5`,
         if (raw.criteria.pronunciation?.band > 6.5) {
             raw.criteria.pronunciation.band = 6.5;
         }
+        // Hard cap for very short transcripts (10–30 words passed the guard)
+        if (wordCount < 20) {
+            for (const key of Object.keys(raw.criteria)) {
+                if (raw.criteria[key]?.band > 2.0) raw.criteria[key].band = 2.0;
+            }
+        } else if (wordCount < 40) {
+            for (const key of Object.keys(raw.criteria)) {
+                if (raw.criteria[key]?.band > 3.0) raw.criteria[key].band = 3.0;
+            }
+        }
         // Enforce Part 2 duration cap on fluencyCoherence (backend safeguard)
         const part2Match = transcript.match(/Part\s*2[:\s\n]+([\s\S]*?)(?:Part\s*3|$)/i);
         if (part2Match && raw.criteria.fluencyCoherence) {
             const part2Words = part2Match[1].trim().split(/\s+/).filter(Boolean).length;
             let fluencyCap = null;
-            if (part2Words < 60)       fluencyCap = 4.5;
-            else if (part2Words < 100) fluencyCap = 5.0;
-            else if (part2Words < 150) fluencyCap = 5.5;
-            else if (part2Words < 200) fluencyCap = 6.5;
+            if (part2Words < 60)       fluencyCap = 3.0;   // < 30 sec
+            else if (part2Words < 120) fluencyCap = 4.0;   // < 1 min
+            else if (part2Words < 180) fluencyCap = 5.0;   // < 1.5 min
+            else if (part2Words < 220) fluencyCap = 5.5;   // < 2 min
             if (fluencyCap !== null && raw.criteria.fluencyCoherence.band > fluencyCap) {
                 raw.criteria.fluencyCoherence.band = fluencyCap;
                 console.log(`[AI] Part 2 word count: ${part2Words} → Fluency cap: ${fluencyCap}`);

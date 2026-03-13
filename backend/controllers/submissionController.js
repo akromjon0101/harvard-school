@@ -2,20 +2,48 @@ import Submission from '../models/Submission.js';
 import Exam from '../models/Exam.js';
 import { runWritingGrading, runSpeakingGrading, runSpeakingPartsGrading, runSpeakingTextGrading } from './aiController.js';
 
-const calculateIELTSBand = (score, total) => {
-    if (!total || total === 0) return 0;
-    if (!score || score === 0) return 0;
-    const percentage = (score / total) * 100;
-    if (percentage >= 97.5) return 9.0;
-    if (percentage >= 87.5) return 8.5;
-    if (percentage >= 81.25) return 8.0;
-    if (percentage >= 75) return 7.5;
-    if (percentage >= 67.5) return 7.0;
-    if (percentage >= 60) return 6.5;
-    if (percentage >= 51.25) return 6.0;
-    if (percentage >= 45) return 5.5;
-    if (percentage >= 38.75) return 5.0;
-    return 4.0;
+// Official IELTS Listening band scale (40 questions → percentage thresholds)
+const calculateListeningBand = (score, total) => {
+    if (!total || !score) return 0;
+    const pct = (score / total) * 100;
+    if (pct >= 97.5) return 9.0;   // 39–40
+    if (pct >= 92.5) return 8.5;   // 37–38
+    if (pct >= 87.5) return 8.0;   // 35–36
+    if (pct >= 80.0) return 7.5;   // 32–34  ← 80% not 82.5%
+    if (pct >= 75.0) return 7.0;   // 30–31
+    if (pct >= 65.0) return 6.5;   // 26–29  ← 65% not 67.5%
+    if (pct >= 57.5) return 6.0;   // 23–25
+    if (pct >= 45.0) return 5.5;   // 18–22  ← 45% not 50%
+    if (pct >= 40.0) return 5.0;   // 16–17
+    if (pct >= 32.5) return 4.5;   // 13–15
+    if (pct >= 25.0) return 4.0;   // 10–12
+    if (pct >= 20.0) return 3.5;   // 8–9
+    if (pct >= 15.0) return 3.0;   // 6–7
+    if (pct >= 10.0) return 2.5;   // 4–5
+    if (pct >=  7.5) return 2.0;   // 2–3
+    return 1.0;                     // 1
+};
+
+// Official IELTS Academic Reading band scale (40 questions → percentage thresholds)
+const calculateReadingBand = (score, total) => {
+    if (!total || !score) return 0;
+    const pct = (score / total) * 100;
+    if (pct >= 97.5) return 9.0;   // 39–40
+    if (pct >= 92.5) return 8.5;   // 37–38
+    if (pct >= 87.5) return 8.0;   // 35–36
+    if (pct >= 82.5) return 7.5;   // 33–34
+    if (pct >= 75.0) return 7.0;   // 30–32
+    if (pct >= 67.5) return 6.5;   // 27–29
+    if (pct >= 57.5) return 6.0;   // 23–26
+    if (pct >= 47.5) return 5.5;   // 19–22  ← 47.5% not 50%
+    if (pct >= 37.5) return 5.0;   // 15–18  ← 37.5% not 40%
+    if (pct >= 32.5) return 4.5;   // 13–14
+    if (pct >= 25.0) return 4.0;   // 10–12
+    if (pct >= 20.0) return 3.5;   // 8–9
+    if (pct >= 15.0) return 3.0;   // 6–7
+    if (pct >= 10.0) return 2.5;   // 4–5
+    if (pct >=  7.5) return 2.0;   // 2–3
+    return 1.0;                     // 1
 };
 
 function norm(v) {
@@ -126,8 +154,8 @@ export const createSubmission = async (req, res) => {
         const rTotal = readingResult.total;
         const rPassageBreakdown = [...(readingResult.sectionBreakdown || [])];
 
-        const lBand = calculateIELTSBand(lScore, lTotal);
-        const rBand = rTotal > 0 ? calculateIELTSBand(rScore, rTotal) : 0;
+        const lBand = calculateListeningBand(lScore, lTotal);
+        const rBand = rTotal > 0 ? calculateReadingBand(rScore, rTotal) : 0;
         const estimatedBand = lTotal > 0 && rTotal > 0
             ? Math.round((lBand + rBand) / 2 * 2) / 2
             : lTotal > 0 ? lBand : rBand;
@@ -266,8 +294,8 @@ export const updateSubmission = async (req, res) => {
         // Recalculate estimatedBand including writing/speaking if graded
         const bands = [];
         const ms = sub.moduleScores;
-        if (ms?.listening?.total > 0) bands.push(calculateIELTSBand(ms.listening.score, ms.listening.total));
-        if (ms?.reading?.total > 0) bands.push(calculateIELTSBand(ms.reading.score, ms.reading.total));
+        if (ms?.listening?.total > 0) bands.push(calculateListeningBand(ms.listening.score, ms.listening.total));
+        if (ms?.reading?.total > 0)  bands.push(calculateReadingBand(ms.reading.score, ms.reading.total));
         if (ms?.writing?.score > 0) bands.push(ms.writing.score);
         if (ms?.speaking?.score > 0) bands.push(ms.speaking.score);
         if (bands.length > 0) {

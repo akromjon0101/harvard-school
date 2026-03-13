@@ -1,8 +1,10 @@
 import React from 'react';
 
 const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber }) => {
-    const { questionText = '', options = [], instructionText } = data;
+    const { questionText = '', options = [] } = data;
     const currentValues = Array.isArray(value) ? value : [];
+    const hasRange = endNumber && endNumber !== qNumber;
+    const qLabel = hasRange ? `${qNumber}-${endNumber}` : String(qNumber);
 
     const toggleOption = (letter) => {
         if (currentValues.includes(letter)) {
@@ -12,14 +14,11 @@ const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber }) => {
         }
     };
 
-    const qLabel = endNumber && endNumber !== qNumber ? `${qNumber}–${endNumber}` : qNumber;
-
     return (
         <div className="ielts-official-mcq-block">
-            {instructionText && <p className="ielts-instruction-italic">{instructionText}</p>}
             <div className="ielts-question-item">
                 <div className="q-num-text-flex">
-                    <span className="q-num-square">{qLabel}</span>
+                    <span className="q-num-square q-num-wide">{qLabel}</span>
                     <p className="q-text-bold">{questionText}</p>
                 </div>
                 <div className="ielts-options-grid">

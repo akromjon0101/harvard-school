@@ -19,7 +19,7 @@ import React from 'react';
 const TableCompletion = ({ data = {}, answers = {}, onChange }) => {
     const { tableData, startNumber, instructionText } = data;
     const headers = tableData?.headers || [];
-    const rows    = tableData?.rows    || [];
+    const rows = tableData?.rows || [];
 
     // Pre-pass: assign question numbers to every [gap] occurrence, in row-major order.
     // cellMap[ri][ci] = number[]  — one entry per [gap] in that cell
@@ -34,7 +34,7 @@ const TableCompletion = ({ data = {}, answers = {}, onChange }) => {
     });
 
     const totalGaps = qCounter - (startNumber || data.questionNumber || 1);
-    const baseNum   = startNumber || data.questionNumber || 1;
+    const baseNum = startNumber || data.questionNumber || 1;
     const rangeHeader = totalGaps > 1
         ? `Questions ${baseNum}–${baseNum + totalGaps - 1}`
         : `Question ${baseNum}`;
@@ -78,9 +78,6 @@ const TableCompletion = ({ data = {}, answers = {}, onChange }) => {
         <div className="ielts-official-gap-container">
             <div className="ielts-block-header-flex">
                 <h4 className="ielts-range-header">{rangeHeader}</h4>
-                {instructionText && (
-                    <p className="ielts-instruction-italic-small">{instructionText}</p>
-                )}
             </div>
 
             <table className="ip-ielts-table">

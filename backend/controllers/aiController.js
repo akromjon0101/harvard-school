@@ -23,28 +23,54 @@ async function maybeAutoComplete(subDoc) {
 }
 
 // ── Band helpers ──────────────────────────────────────────────────────────────
-function ieltsFromRaw(score, total) {
-    if (!total) return 0;
-    if (!score) return 0;
+function ieltsListeningBand(score, total) {
+    if (!total || !score) return 0;
     const pct = (score / total) * 100;
-    if (pct >= 97.5)  return 9.0;
-    if (pct >= 87.5)  return 8.5;
-    if (pct >= 81.25) return 8.0;
-    if (pct >= 75)    return 7.5;
-    if (pct >= 67.5)  return 7.0;
-    if (pct >= 60)    return 6.5;
-    if (pct >= 51.25) return 6.0;
-    if (pct >= 45)    return 5.5;
-    if (pct >= 38.75) return 5.0;
-    return 4.0;
+    if (pct >= 97.5) return 9.0;
+    if (pct >= 92.5) return 8.5;
+    if (pct >= 87.5) return 8.0;
+    if (pct >= 80.0) return 7.5;
+    if (pct >= 75.0) return 7.0;
+    if (pct >= 65.0) return 6.5;
+    if (pct >= 57.5) return 6.0;
+    if (pct >= 45.0) return 5.5;
+    if (pct >= 40.0) return 5.0;
+    if (pct >= 32.5) return 4.5;
+    if (pct >= 25.0) return 4.0;
+    if (pct >= 20.0) return 3.5;
+    if (pct >= 15.0) return 3.0;
+    if (pct >= 10.0) return 2.5;
+    if (pct >=  7.5) return 2.0;
+    return 1.0;
+}
+
+function ieltsReadingBand(score, total) {
+    if (!total || !score) return 0;
+    const pct = (score / total) * 100;
+    if (pct >= 97.5) return 9.0;
+    if (pct >= 92.5) return 8.5;
+    if (pct >= 87.5) return 8.0;
+    if (pct >= 82.5) return 7.5;
+    if (pct >= 75.0) return 7.0;
+    if (pct >= 67.5) return 6.5;
+    if (pct >= 57.5) return 6.0;
+    if (pct >= 47.5) return 5.5;
+    if (pct >= 37.5) return 5.0;
+    if (pct >= 32.5) return 4.5;
+    if (pct >= 25.0) return 4.0;
+    if (pct >= 20.0) return 3.5;
+    if (pct >= 15.0) return 3.0;
+    if (pct >= 10.0) return 2.5;
+    if (pct >=  7.5) return 2.0;
+    return 1.0;
 }
 
 // IELTS official overall band: average of included modules, rounded to nearest 0.5
 function recalcBand(sub) {
     const bands = [];
     const ms = sub.moduleScores;
-    if (ms?.listening?.total > 0) bands.push(ieltsFromRaw(ms.listening.score, ms.listening.total));
-    if (ms?.reading?.total  > 0)  bands.push(ieltsFromRaw(ms.reading.score,  ms.reading.total));
+    if (ms?.listening?.total > 0) bands.push(ieltsListeningBand(ms.listening.score, ms.listening.total));
+    if (ms?.reading?.total  > 0)  bands.push(ieltsReadingBand(ms.reading.score,  ms.reading.total));
     if (ms?.writing?.score  > 0)  bands.push(ms.writing.score);
     if (ms?.speaking?.score > 0)  bands.push(ms.speaking.score);
     if (bands.length > 0) {
@@ -169,7 +195,7 @@ export async function runSpeakingGrading(submissionId) {
     await maybeAutoComplete(sub);
 }
 
-// ── Speaking parts — transcribe each part (if needed) then grade ──────────────
+// ── Speaking parts — transcribe each part then grade per-part with context ─────
 export async function runSpeakingPartsGrading(submissionId) {
     const sub = await Submission.findById(submissionId);
     if (!sub?.speakingParts?.length) return;
@@ -180,7 +206,7 @@ export async function runSpeakingPartsGrading(submissionId) {
     await sub.save();
 
     try {
-        // Transcribe any part that doesn't have a transcript yet
+        // 1. Transcribe any part that doesn't have a transcript yet
         for (let i = 0; i < sub.speakingParts.length; i++) {
             const part = sub.speakingParts[i];
             if (part.transcript?.trim() || !part.audioUrl) continue;
@@ -199,48 +225,82 @@ export async function runSpeakingPartsGrading(submissionId) {
             await sub.save();
         }
 
-        // Reload to get latest saved transcripts
+        // 2. Reload and collect parts that have transcripts
         const fresh = await Submission.findById(submissionId);
         const parts = (fresh.speakingParts || [])
             .filter(p => p.transcript?.trim())
             .sort((a, b) => a.partIndex - b.partIndex);
 
         if (!parts.length) {
-            fresh.aiGrading = fresh.aiGrading || {};
             fresh.aiGrading.speaking = { status: 'error', error: 'All parts failed transcription' };
             fresh.markModified('aiGrading');
             await fresh.save();
             return;
         }
 
-        const combinedTranscript = parts
-            .map(p => `Part ${p.partIndex + 1}:\n${p.transcript}`)
-            .join('\n\n');
+        // 3. Fetch exam speaking sections for question context per part
+        let speakingSections = [];
+        try {
+            const examDoc = await Exam.findById(fresh.exam).select('modules.speaking').lean();
+            speakingSections = examDoc?.modules?.speaking || [];
+        } catch { speakingSections = []; }
 
-        console.log(`[AI] Grading speaking parts for ${submissionId}`);
-        const result = await gradeSpeakingText(combinedTranscript);
-
-        fresh.aiGrading.speaking = {
-            status: 'done', transcript: combinedTranscript,
-            band:             result.band,
-            criteria:         result.criteria,
-            strengths:        result.strengths        || [],
-            weaknesses:       result.weaknesses       || [],
-            improvementAdvice:result.improvementAdvice|| [],
-            questionAnalysis: result.questionAnalysis || '',
-            relevanceCheck:   result.relevanceCheck   || '',
-            feedback:         result.feedback,
-            gradedAt:         new Date(),
-        };
-
-        // Update moduleScores.speaking
-        const ms = fresh.moduleScores?.toObject?.() ?? { ...fresh.moduleScores };
-        fresh.moduleScores = { ...ms, speaking: { score: result.band, total: 9 } };
-        fresh.markModified('moduleScores');
-        recalcBand(fresh);
+        // 4. Grade each part separately with its questions
+        fresh.aiGrading.speakingTexts = parts.map(p => ({ partIndex: p.partIndex, status: 'processing' }));
         fresh.markModified('aiGrading');
         await fresh.save();
-        console.log(`[AI] Speaking parts done — Band ${result.band} → estimatedBand: ${fresh.estimatedBand}`);
+
+        const bandResults = [];
+
+        for (let idx = 0; idx < parts.length; idx++) {
+            const part = parts[idx];
+            const i = part.partIndex;
+            const section   = speakingSections[i] || {};
+            const partLabel = section.title || `Part ${i + 1}`;
+            const questions = (section.questions || []).map(q => q.questionText || '').filter(Boolean);
+
+            console.log(`[AI] Grading ${partLabel} for ${submissionId} (${questions.length} questions)`);
+            try {
+                const result = await gradeSpeakingWithContext(part.transcript, partLabel, questions);
+                fresh.aiGrading.speakingTexts[idx] = {
+                    partIndex: i, status: 'done', transcript: part.transcript,
+                    band:             result.band,
+                    criteria:         result.criteria,
+                    strengths:        result.strengths         || [],
+                    weaknesses:       result.weaknesses        || [],
+                    improvementAdvice:result.improvementAdvice || [],
+                    questionAnalysis: result.questionAnalysis  || '',
+                    relevanceCheck:   result.relevanceCheck    || '',
+                    feedback:         result.feedback,
+                    gradedAt:         new Date(),
+                };
+                bandResults.push(result.band);
+                console.log(`[AI] ${partLabel} done — Band ${result.band}`);
+            } catch (err) {
+                console.error(`[AI] ${partLabel} grading failed:`, err.message);
+                fresh.aiGrading.speakingTexts[idx] = { partIndex: i, status: 'error', error: err.message };
+            }
+            fresh.markModified('aiGrading');
+            await fresh.save();
+        }
+
+        // 5. Overall band = average of all graded parts
+        if (bandResults.length > 0) {
+            const avgBand = bandResults.reduce((a, b) => a + b, 0) / bandResults.length;
+            const roundedBand = Math.round(avgBand * 2) / 2;
+            fresh.aiGrading.speaking = { status: 'done', band: roundedBand, gradedAt: new Date() };
+            const ms = fresh.moduleScores?.toObject?.() ?? { ...fresh.moduleScores };
+            fresh.moduleScores = { ...ms, speaking: { score: roundedBand, total: 9 } };
+            fresh.markModified('moduleScores');
+            recalcBand(fresh);
+            fresh.markModified('aiGrading');
+            await fresh.save();
+            console.log(`[AI] Speaking parts avg band: ${roundedBand} → estimatedBand: ${fresh.estimatedBand}`);
+        } else {
+            fresh.aiGrading.speaking = { status: 'error', error: 'All parts failed grading' };
+            fresh.markModified('aiGrading');
+            await fresh.save();
+        }
         await maybeAutoComplete(fresh);
 
     } catch (err) {

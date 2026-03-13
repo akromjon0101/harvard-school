@@ -12,7 +12,6 @@ const Matching = ({ data = {}, value = {}, onChange, qNumber }) => {
         <div className="ielts-official-matching-block">
             <div className="ielts-block-header-flex">
                 <h4 className="ielts-range-header">{rangeHeader}</h4>
-                {instructionText && <p className="ielts-instruction-italic-small">{instructionText}</p>}
             </div>
 
             {questionText && (

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
-import SpeakingHero     from '../components/exam/SpeakingHero'
+import SpeakingHero from '../components/exam/SpeakingHero'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 
@@ -161,7 +161,7 @@ function WritingArea({ sectionIdx, value, onChange }) {
 // moduleAnswers: plain {qNum: answer} map for QuestionRenderer
 // module: current module string (for flag key)
 // onFocus: called with qNum when user interacts with this block
-function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onToggleFlag, onFocus }) {
+function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onToggleFlag, onFocus, hideInstruction }) {
     const qNum = q.startNumber ?? q.questionNumber
     const isFlagged = !!flagged[`${module}_${qNum}`]
 
@@ -184,6 +184,7 @@ function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onTog
                 value={moduleAnswers}
                 onChange={onChange}
                 qNumber={qNum}
+                hideInstruction={hideInstruction}
             />
         </div>
     )
@@ -194,18 +195,18 @@ export default function IELTSExamPage() {
     const { id } = useParams()
     const navigate = useNavigate()
 
-    const [exam, setExam]                     = useState(null)
-    const [partIndex, setPartIndex]           = useState(0)
+    const [exam, setExam] = useState(null)
+    const [partIndex, setPartIndex] = useState(0)
     // Keys: 'listening_1', 'reading_5', 'writing_0'
-    const [answers, setAnswers]               = useState({})
+    const [answers, setAnswers] = useState({})
     // Keys: 'listening_1': true
-    const [flagged, setFlagged]               = useState({})
+    const [flagged, setFlagged] = useState({})
     // Active question NUMBER in current module (for navigator highlighting)
     const [activeQuestion, setActiveQuestion] = useState(null)
-    const [timeLeft, setTimeLeft]             = useState(null)
-    const [timerPaused, setTimerPaused]       = useState(false)
+    const [timeLeft, setTimeLeft] = useState(null)
+    const [timerPaused, setTimerPaused] = useState(false)
     const moduleTimerRef = useRef(null) // tracks which module's timer is currently running
-    const [isSubmitting, setIsSubmitting]     = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
     // Highlight state (reading + listening passages)
@@ -215,23 +216,23 @@ export default function IELTSExamPage() {
 
     // Audio state
     const audioRef = useRef(null)
-    const [hasPlayed, setHasPlayed]           = useState({})
-    const [audioProgress, setAudioProgress]   = useState(0)
-    const [audioDuration, setAudioDuration]   = useState(0)
-    const [isAudioPlaying, setIsAudioPlaying]       = useState(false)
+    const [hasPlayed, setHasPlayed] = useState({})
+    const [audioProgress, setAudioProgress] = useState(0)
+    const [audioDuration, setAudioDuration] = useState(0)
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false)
     const [audioCheckConfirmed, setAudioCheckConfirmed] = useState(false)
-    const [testAudioPlayed, setTestAudioPlayed]     = useState(false)
+    const [testAudioPlayed, setTestAudioPlayed] = useState(false)
 
     // TTS state for reading speaking prompts aloud
     const [ttsSpeaking, setTtsSpeaking] = useState(false)
 
     // Speaking recording state (per sectionIdx)
     const speakingRecorderRef = useRef(null)
-    const speakingChunksRef   = useRef([])
-    const [speakingRecording, setSpeakingRecording]   = useState(false)  // currently recording
-    const [speakingAudios, setSpeakingAudios]         = useState({})     // sectionIdx → blobUrl
-    const [speakingDurations, setSpeakingDurations]   = useState({})     // sectionIdx → seconds
-    const [speakingPlayIdx, setSpeakingPlayIdx]       = useState(null)   // which part is playing
+    const speakingChunksRef = useRef([])
+    const [speakingRecording, setSpeakingRecording] = useState(false)  // currently recording
+    const [speakingAudios, setSpeakingAudios] = useState({})     // sectionIdx → blobUrl
+    const [speakingDurations, setSpeakingDurations] = useState({})     // sectionIdx → seconds
+    const [speakingPlayIdx, setSpeakingPlayIdx] = useState(null)   // which part is playing
     const speakingPlaybackRef = useRef(null)
 
     // Cancel TTS on unmount
@@ -310,13 +311,13 @@ export default function IELTSExamPage() {
     const parts = useMemo(() => {
         if (!exam?.modules) return []
         const result = []
-        ;['listening', 'reading', 'writing', 'speaking'].forEach(mod => {
-            const moduleData = exam.modules[mod]
-            if (!Array.isArray(moduleData) || moduleData.length === 0) return
-            moduleData.forEach((section, idx) => {
-                result.push({ module: mod, sectionIdx: idx, section })
+            ;['listening', 'reading', 'writing', 'speaking'].forEach(mod => {
+                const moduleData = exam.modules[mod]
+                if (!Array.isArray(moduleData) || moduleData.length === 0) return
+                moduleData.forEach((section, idx) => {
+                    result.push({ module: mod, sectionIdx: idx, section })
+                })
             })
-        })
         return result
     }, [exam])
 
@@ -325,9 +326,9 @@ export default function IELTSExamPage() {
     const { module: currentModule, sectionIdx, section } = currentPart
 
     const isListening = currentModule === 'listening'
-    const isReading   = currentModule === 'reading'
-    const isWriting   = currentModule === 'writing'
-    const isSpeaking  = currentModule === 'speaking'
+    const isReading = currentModule === 'reading'
+    const isWriting = currentModule === 'writing'
+    const isSpeaking = currentModule === 'speaking'
 
     // Per-module timer: Reading = 60 min, Writing = 60 min, others = no timer
     useEffect(() => {
@@ -346,7 +347,7 @@ export default function IELTSExamPage() {
             setTimeLeft(null)
             setTimerPaused(true)
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isReading, isWriting, isListening, isSpeaking])
 
     // ── Timer countdown ───────────────────────────────────────────────────────
@@ -376,7 +377,7 @@ export default function IELTSExamPage() {
         }
         const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000)
         return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [timeLeft, timerPaused, parts, id])
 
     // Cancel TTS when leaving speaking section
@@ -391,14 +392,14 @@ export default function IELTSExamPage() {
     const mcqMultiStartNums = useMemo(() => {
         if (!currentModule || isWriting || isSpeaking || !exam?.modules) return new Set()
         const set = new Set()
-        ;(exam.modules[currentModule] || []).forEach(sec => {
-            ;(sec.questions || []).forEach(q => {
-                if (q?.type === 'mcq-multi' || q?.type === 'mcq-multiple') {
-                    const start = q.startNumber ?? q.questionNumber
-                    if (typeof start === 'number') set.add(start)
-                }
+            ; (exam.modules[currentModule] || []).forEach(sec => {
+                ; (sec.questions || []).forEach(q => {
+                    if (q?.type === 'mcq-multi' || q?.type === 'mcq-multiple') {
+                        const start = q.startNumber ?? q.questionNumber
+                        if (typeof start === 'number') set.add(start)
+                    }
+                })
             })
-        })
         return set
     }, [exam, currentModule, isWriting, isSpeaking])
 
@@ -409,7 +410,7 @@ export default function IELTSExamPage() {
         const modSections = exam.modules[currentModule] || []
         const nums = new Set()
         modSections.forEach(sec => {
-            ;(sec.questions || []).forEach(q => {
+            ; (sec.questions || []).forEach(q => {
                 if (!q) return
                 const start = q.startNumber ?? q.questionNumber
                 if (typeof start !== 'number') return
@@ -426,15 +427,15 @@ export default function IELTSExamPage() {
         parts.forEach((part, pIdx) => {
             const { module, section } = part
             if (!module || module === 'writing' || module === 'speaking') return
-            ;(section.questions || []).forEach(q => {
-                if (!q) return
-                const start = q.startNumber ?? q.questionNumber
-                if (typeof start !== 'number') return
-                const count = getQCount(q)
-                for (let i = 0; i < count; i++) {
-                    map[`${module}_${start + i}`] = pIdx
-                }
-            })
+                ; (section.questions || []).forEach(q => {
+                    if (!q) return
+                    const start = q.startNumber ?? q.questionNumber
+                    if (typeof start !== 'number') return
+                    const count = getQCount(q)
+                    for (let i = 0; i < count; i++) {
+                        map[`${module}_${start + i}`] = pIdx
+                    }
+                })
         })
         return map
     }, [parts])
@@ -501,17 +502,17 @@ export default function IELTSExamPage() {
         parts.forEach(part => {
             const { module: mod, section: sec } = part
             if (!mod || mod === 'writing' || mod === 'speaking') return
-            ;(sec.questions || []).forEach(q => {
-                if (!q) return
-                const start = q.startNumber ?? q.questionNumber
-                if (typeof start !== 'number') return
-                const count = getQCount(q)
-                for (let i = 0; i < count; i++) {
-                    total++
-                    const key = `${mod}_${start + i}`
-                    if (answers[key] !== undefined && answers[key] !== '') answered++
-                }
-            })
+                ; (sec.questions || []).forEach(q => {
+                    if (!q) return
+                    const start = q.startNumber ?? q.questionNumber
+                    if (typeof start !== 'number') return
+                    const count = getQCount(q)
+                    for (let i = 0; i < count; i++) {
+                        total++
+                        const key = `${mod}_${start + i}`
+                        if (answers[key] !== undefined && answers[key] !== '') answered++
+                    }
+                })
         })
         return { totalAllQ: total, answeredAll: answered }
     }, [answers, parts])
@@ -604,7 +605,7 @@ export default function IELTSExamPage() {
         if (!el || !el.contains(range.commonAncestorContainer)) { setSelectionPopup(p => ({ ...p, visible: false })); return }
         try {
             const startOffset = getCaretOffset(el, range.startContainer, range.startOffset)
-            const endOffset   = getCaretOffset(el, range.endContainer,   range.endOffset)
+            const endOffset = getCaretOffset(el, range.endContainer, range.endOffset)
             if (endOffset <= startOffset) { setSelectionPopup(p => ({ ...p, visible: false })); return }
             const rect = range.getBoundingClientRect()
             setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: rect.top, start: startOffset, end: endOffset })
@@ -643,18 +644,24 @@ export default function IELTSExamPage() {
         if (!section?.questions?.length) {
             return <div className="ip-empty-section">No questions in this section.</div>
         }
-        return section.questions.map((q, i) => (
-            <PaperQuestionBlock
-                key={`${currentModule}_${q.startNumber ?? q.questionNumber ?? i}`}
-                q={q}
-                moduleAnswers={moduleAnswers}
-                module={currentModule}
-                onChange={handleAnswerChange}
-                flagged={flagged}
-                onToggleFlag={toggleFlag}
-                onFocus={setActiveQuestion}
-            />
-        ))
+        return section.questions.map((q, i) => {
+            const prevQ = i > 0 ? section.questions[i - 1] : null;
+            const hideInstruction = prevQ && prevQ.instructionText && prevQ.instructionText === q.instructionText;
+
+            return (
+                <PaperQuestionBlock
+                    key={`${currentModule}_${q.startNumber ?? q.questionNumber ?? i}`}
+                    q={q}
+                    moduleAnswers={moduleAnswers}
+                    module={currentModule}
+                    onChange={handleAnswerChange}
+                    flagged={flagged}
+                    onToggleFlag={toggleFlag}
+                    onFocus={setActiveQuestion}
+                    hideInstruction={hideInstruction}
+                />
+            );
+        });
     }, [section, moduleAnswers, currentModule, handleAnswerChange, flagged, toggleFlag])
 
     // ── Loading / empty states ────────────────────────────────────────────────
@@ -670,7 +677,7 @@ export default function IELTSExamPage() {
 
     const partLabel = getPartLabel(currentModule, sectionIdx)
     const timeWarning = timeLeft !== null && timeLeft < 300
-    const timeDanger  = timeLeft !== null && timeLeft < 60
+    const timeDanger = timeLeft !== null && timeLeft < 60
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
@@ -764,8 +771,8 @@ export default function IELTSExamPage() {
             <div className="ip-body">
                 <div className={[
                     'ip-paper',
-                    isReading   ? 'reading-layout'   : '',
-                    isWriting   ? 'writing-layout'   : '',
+                    isReading ? 'reading-layout' : '',
+                    isWriting ? 'writing-layout' : '',
                     isListening ? 'listening-layout' : '',
                 ].filter(Boolean).join(' ')}>
 
@@ -992,15 +999,15 @@ export default function IELTSExamPage() {
                                 const dotKey = `${currentModule}_${n}`
                                 const isAnswered = answers[dotKey] !== undefined && answers[dotKey] !== ''
                                 const isFlaggedQ = !!flagged[dotKey]
-                                const isActive   = activeQuestion === n
+                                const isActive = activeQuestion === n
                                 return (
                                     <div
                                         key={dotKey}
                                         className={[
                                             'ip-q-dot',
-                                            isFlaggedQ ? 'flagged'  : '',
+                                            isFlaggedQ ? 'flagged' : '',
                                             isAnswered ? 'answered' : '',
-                                            isActive   ? 'active'   : '',
+                                            isActive ? 'active' : '',
                                         ].filter(Boolean).join(' ')}
                                         onClick={() => {
                                             const targetPart = qPartMap[dotKey]
@@ -1047,9 +1054,9 @@ export default function IELTSExamPage() {
                 <div className="ip-footer-controls-row">
                     <div className="ip-legend">
                         <span className="ip-legend-item"><span className="ip-legend-sq answered" />Answered</span>
-                        <span className="ip-legend-item"><span className="ip-legend-sq active"   />Active</span>
-                        <span className="ip-legend-item"><span className="ip-legend-sq flagged"  />Flagged</span>
-                        <span className="ip-legend-item"><span className="ip-legend-sq empty"    />Unanswered</span>
+                        <span className="ip-legend-item"><span className="ip-legend-sq active" />Active</span>
+                        <span className="ip-legend-item"><span className="ip-legend-sq flagged" />Flagged</span>
+                        <span className="ip-legend-item"><span className="ip-legend-sq empty" />Unanswered</span>
                     </div>
                     {!isWriting && !isSpeaking && currentModuleQNums.length > 0 && (
                         <span className="ip-answered-count">
@@ -1128,13 +1135,13 @@ function SpeakingRecorder({
     speakingRecorderRef, speakingChunksRef, speakingPlaybackRef,
     onUploaded,
 }) {
-    const [elapsed, setElapsed]     = useState(0)
-    const [micError, setMicError]   = useState('')
+    const [elapsed, setElapsed] = useState(0)
+    const [micError, setMicError] = useState('')
     const [uploading, setUploading] = useState(false)
-    const timerRef    = useRef(null)
-    const elapsedRef  = useRef(0)  // always current, readable inside onstop closure
+    const timerRef = useRef(null)
+    const elapsedRef = useRef(0)  // always current, readable inside onstop closure
 
-    const blobUrl  = speakingAudios[sectionIdx]
+    const blobUrl = speakingAudios[sectionIdx]
     const duration = speakingDurations[sectionIdx] || 0
     const isPlaying = speakingPlayIdx === sectionIdx
 
@@ -1165,7 +1172,7 @@ function SpeakingRecorder({
                 try {
                     const fd = new FormData()
                     fd.append('audio', new File([blob], `speaking_part${sectionIdx}.webm`, { type: 'audio/webm' }))
-                    const res  = await fetch(`${BASE}/speaking/upload`, {
+                    const res = await fetch(`${BASE}/speaking/upload`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
                         body: fd,

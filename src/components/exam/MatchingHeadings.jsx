@@ -1,11 +1,11 @@
 import React from 'react';
 
-const ROMAN = ['i','ii','iii','iv','v','vi','vii','viii','ix','x','xi','xii'];
+const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'];
 
 const MatchingHeadings = ({ data = {}, answers = {}, onChange, qNumber }) => {
-    const headings   = data.options       || [];
+    const headings = data.options || [];
     const paragraphs = data.matchingItems || [];
-    const baseNum    = data.startNumber   || data.questionNumber || qNumber || 1;
+    const baseNum = data.startNumber || data.questionNumber || qNumber || 1;
     const instructionText = data.instructionText;
 
     const rangeHeader = paragraphs.length > 1
@@ -16,9 +16,6 @@ const MatchingHeadings = ({ data = {}, answers = {}, onChange, qNumber }) => {
         <div className="ielts-official-gap-container">
             <div className="ielts-block-header-flex">
                 <h4 className="ielts-range-header">{rangeHeader}</h4>
-                {instructionText && (
-                    <p className="ielts-instruction-italic-small">{instructionText}</p>
-                )}
             </div>
 
             {headings.length > 0 && (

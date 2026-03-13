@@ -17,19 +17,45 @@ export default function MyResults() {
             .catch(() => setLoading(false))
     }, [])
 
-    const ieltsFromRaw = (score, total) => {
-        if (!total) return null
+    const listeningBand = (score, total) => {
+        if (!total || !score) return null
         const pct = (score / total) * 100
-        if (pct >= 97.5)  return 9.0
-        if (pct >= 87.5)  return 8.5
-        if (pct >= 81.25) return 8.0
-        if (pct >= 75)    return 7.5
-        if (pct >= 67.5)  return 7.0
-        if (pct >= 60)    return 6.5
-        if (pct >= 51.25) return 6.0
-        if (pct >= 45)    return 5.5
-        if (pct >= 38.75) return 5.0
-        return 4.0
+        if (pct >= 97.5) return 9.0
+        if (pct >= 92.5) return 8.5
+        if (pct >= 87.5) return 8.0
+        if (pct >= 80.0) return 7.5
+        if (pct >= 75.0) return 7.0
+        if (pct >= 65.0) return 6.5
+        if (pct >= 57.5) return 6.0
+        if (pct >= 45.0) return 5.5
+        if (pct >= 40.0) return 5.0
+        if (pct >= 32.5) return 4.5
+        if (pct >= 25.0) return 4.0
+        if (pct >= 20.0) return 3.5
+        if (pct >= 15.0) return 3.0
+        if (pct >= 10.0) return 2.5
+        if (pct >=  7.5) return 2.0
+        return 1.0
+    }
+    const readingBand = (score, total) => {
+        if (!total || !score) return null
+        const pct = (score / total) * 100
+        if (pct >= 97.5) return 9.0
+        if (pct >= 92.5) return 8.5
+        if (pct >= 87.5) return 8.0
+        if (pct >= 82.5) return 7.5
+        if (pct >= 75.0) return 7.0
+        if (pct >= 67.5) return 6.5
+        if (pct >= 57.5) return 6.0
+        if (pct >= 47.5) return 5.5
+        if (pct >= 37.5) return 5.0
+        if (pct >= 32.5) return 4.5
+        if (pct >= 25.0) return 4.0
+        if (pct >= 20.0) return 3.5
+        if (pct >= 15.0) return 3.0
+        if (pct >= 10.0) return 2.5
+        if (pct >=  7.5) return 2.0
+        return 1.0
     }
 
     const getBandColor = (band) => {
@@ -120,7 +146,7 @@ export default function MyResults() {
                                             score={listening?.score}
                                             total={listening?.total}
                                             icon="🎧"
-                                            band={ieltsFromRaw(listening?.score, listening?.total)}
+                                            band={listeningBand(listening?.score, listening?.total)}
                                             getBandColor={getBandColor}
                                         />
                                         <ScoreModule
@@ -128,7 +154,7 @@ export default function MyResults() {
                                             score={reading?.score}
                                             total={reading?.total}
                                             icon="📖"
-                                            band={ieltsFromRaw(reading?.score, reading?.total)}
+                                            band={readingBand(reading?.score, reading?.total)}
                                             getBandColor={getBandColor}
                                         />
                                         <BandModule

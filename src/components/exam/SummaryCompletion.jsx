@@ -23,9 +23,6 @@ const SummaryCompletion = ({ data = {}, answers = {}, onChange, startNumber }) =
         <div className="ielts-official-gap-container">
             <div className="ielts-block-header-flex">
                 <h4 className="ielts-range-header">{rangeHeader}</h4>
-                {instructionText && (
-                    <p className="ielts-instruction-italic-small">{instructionText}</p>
-                )}
             </div>
 
             <div className="ip-summary-box">

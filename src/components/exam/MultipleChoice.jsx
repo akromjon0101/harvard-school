@@ -5,7 +5,7 @@ const MultipleChoice = ({ data = {}, value, onChange, qNumber }) => {
 
     return (
         <div className="ielts-official-mcq-block">
-            {instructionText && <p className="ielts-instruction-italic">{instructionText}</p>}
+            
             <div className="ielts-question-item">
                 <div className="q-num-text-flex">
                     <span className="q-num-square">{qNumber}</span>

@@ -1,11 +1,11 @@
 import React from 'react';
 
 const ChooseFromBox = ({ data = {}, answers = {}, onChange, qNumber }) => {
-    const options   = data.options       || [];
-    const items     = data.matchingItems || [];
-    const baseNum   = data.startNumber   || data.questionNumber || qNumber || 1;
+    const options = data.options || [];
+    const items = data.matchingItems || [];
+    const baseNum = data.startNumber || data.questionNumber || qNumber || 1;
     const instructionText = data.instructionText;
-    const boxTitle  = data.boxTitle || 'Word Bank';
+    const boxTitle = data.boxTitle || 'Word Bank';
 
     const rangeHeader = items.length > 1
         ? `Questions ${baseNum}–${baseNum + items.length - 1}`
@@ -19,9 +19,6 @@ const ChooseFromBox = ({ data = {}, answers = {}, onChange, qNumber }) => {
         <div className="ielts-official-gap-container">
             <div className="ielts-block-header-flex">
                 <h4 className="ielts-range-header">{rangeHeader}</h4>
-                {instructionText && (
-                    <p className="ielts-instruction-italic-small">{instructionText}</p>
-                )}
             </div>
 
             {/* Word bank */}

@@ -9,7 +9,7 @@ import SummaryPhraseBank from './SummaryPhraseBank';
 import MatchingHeadings from './MatchingHeadings';
 import ChooseFromBox from './ChooseFromBox';
 
-const QuestionRenderer = ({ type, data, value, onChange, qNumber }) => {
+const QuestionRenderer = ({ type, data, value, onChange, qNumber, hideInstruction }) => {
 
     // Shared formatting for MCQ/Matching
     const getOptions = () => {
@@ -72,9 +72,7 @@ const QuestionRenderer = ({ type, data, value, onChange, qNumber }) => {
             case 'map-labeling':
                 return (
                     <Matching
-                        data={data}
-                        matchOptions={getOptions()}
-                        items={data.matchingItems || []}
+                        data={{ ...data, options: getOptions() }}
                         value={value}
                         onChange={onChange}
                         qNumber={qNumber}
@@ -136,8 +134,8 @@ const QuestionRenderer = ({ type, data, value, onChange, qNumber }) => {
     };
 
     return (
-        <div className="ielts-question-block-container" style={{ marginBottom: '40px' }}>
-            {data.instructionText && (
+        <div className="ielts-question-block-container">
+            {data.instructionText && !hideInstruction && (
                 <div className="ip-content-instructions">{data.instructionText}</div>
             )}
             {data.image && (
