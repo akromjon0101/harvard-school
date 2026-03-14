@@ -173,7 +173,7 @@ export default function SpeakingHero({
             const res  = await fetch(`${BASE}/tts`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-                body: JSON.stringify({ text, voice: 'nova' }),
+                body: JSON.stringify({ text, voice: 'fable' }),
             })
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
             const data = await res.json()
