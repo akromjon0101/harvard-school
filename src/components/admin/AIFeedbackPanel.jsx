@@ -97,7 +97,7 @@ function WritingAICard({ data, taskIndex }) {
                             </span>
                         )}
                     </div>
-                    <span style={doneBadge}>Band {data.band?.toFixed(1)}</span>
+                    <span style={doneBadge(data.band)}>Band {data.band?.toFixed(1)}</span>
                 </div>
                 <div style={{ padding: '14px 16px' }}>
                     {data.questionAnalysis && (
@@ -199,7 +199,7 @@ function SpeakingAICard({ data }) {
             <div style={cardStyle}>
                 <div style={cardHeaderStyle(color)}>
                     <span>{label} — AI Assessment</span>
-                    <span style={doneBadge}>Band {data.band?.toFixed(1)}</span>
+                    <span style={doneBadge(data.band)}>Band {data.band?.toFixed(1)}</span>
                 </div>
                 <div style={{ padding: '14px 16px' }}>
                     {data.questionAnalysis && (
@@ -482,9 +482,11 @@ function cardHeaderStyle(color) {
     }
 }
 
-const doneBadge = {
-    fontSize: '12px', fontWeight: 800, padding: '2px 10px',
-    background: '#16a34a', color: '#fff', borderRadius: '12px',
+function doneBadge(band) {
+    return {
+        fontSize: '12px', fontWeight: 800, padding: '2px 10px',
+        background: bandColor(band), color: '#fff', borderRadius: '12px',
+    }
 }
 const processingBadge = {
     fontSize: '11px', fontWeight: 700, padding: '2px 10px',
