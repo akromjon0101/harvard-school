@@ -8,7 +8,7 @@ import {
     ChevronDown,
     Lock,
 } from 'lucide-react'
-import logoImg from '../assets/logo.jpg'
+import logoImg from '../assets/logotip.png'
 import '../styles/navbar.css'
 
 export default function Navbar() {
