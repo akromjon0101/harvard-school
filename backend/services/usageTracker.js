@@ -29,8 +29,8 @@ export async function trackWhisper({ durationSec = 0, context = '', userId = nul
 // Log a TTS call
 export async function trackTTS({ characters = 0, context = 'tts', userId = null }) {
     try {
-        const costUsd = characters * PRICING['tts-1'].perChar;
-        await UsageLog.create({ service: 'tts', model: 'tts-1', characters, costUsd, context, userId });
+        const costUsd = characters * PRICING['tts-1-hd'].perChar;
+        await UsageLog.create({ service: 'tts', model: 'tts-1-hd', characters, costUsd, context, userId });
     } catch (err) {
         console.error('usageTracker.trackTTS error:', err.message);
     }

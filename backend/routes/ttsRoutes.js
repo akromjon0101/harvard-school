@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
     }
 
     // Cache by (voice + text) so repeated calls are free
-    const hash      = crypto.createHash('md5').update(`${voice}:${text.trim()}`).digest('hex');
+    const hash      = crypto.createHash('md5').update(`tts-1-hd:${voice}:${text.trim()}`).digest('hex');
     const cacheFile = path.join(TTS_CACHE_DIR, `${hash}.mp3`);
 
     if (fs.existsSync(cacheFile)) {
@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
 
     try {
         const response = await openai.audio.speech.create({
-            model:           'tts-1',
+            model:           'tts-1-hd',
             voice,
             input:           text.trim(),
             response_format: 'mp3',

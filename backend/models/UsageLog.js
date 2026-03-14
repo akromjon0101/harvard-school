@@ -6,6 +6,7 @@ export const PRICING = {
     'gpt-4o-mini':     { input: 0.150 / 1_000_000, output: 0.600 / 1_000_000 },
     'whisper-1':       { perMinute: 0.006 },   // per audio minute
     'tts-1':           { perChar:   0.000015 }, // $15 / 1M chars
+    'tts-1-hd':        { perChar:   0.000030 }, // $30 / 1M chars
 };
 
 const usageLogSchema = new mongoose.Schema({
