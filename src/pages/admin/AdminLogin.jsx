@@ -33,7 +33,11 @@ export default function AdminLogin() {
             localStorage.setItem('user', JSON.stringify(data.user));
             navigate('/admin');
         } catch (err) {
-            setError(err.message || 'Admin authentication failed')
+            if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+                setError('Server bilan ulanib bo\'lmadi. Backend ishlaayotganini tekshiring.')
+            } else {
+                setError(err.message || 'Admin authentication failed')
+            }
         } finally {
             setLoading(false)
         }

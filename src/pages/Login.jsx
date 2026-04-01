@@ -34,7 +34,11 @@ export default function Login() {
         navigate('/dashboard')
       }
     } catch (err) {
-      setError(err.message)
+      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        setError('Server bilan ulanib bo\'lmadi. Backend ishlaayotganini tekshiring.')
+      } else {
+        setError(err.message)
+      }
     } finally {
       setLoading(false)
     }
