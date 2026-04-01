@@ -1,7 +1,3 @@
-import dns from 'dns';
-// Use Google DNS to bypass router DNS that blocks MongoDB Atlas SRV records
-dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
-
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
