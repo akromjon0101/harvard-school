@@ -1,3 +1,7 @@
+import dns from 'dns';
+// Use Google DNS to bypass router DNS that blocks MongoDB Atlas SRV records
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -184,6 +188,15 @@ const connectDB = async () => {
   try {
     const uri = process.env.MONGODB_URI;
 
+    if (!uri) {
+      console.warn('⚠️ MONGODB_URI is not defined in environment variables.');
+      if (process.env.NODE_ENV === 'production') {
+        console.error('🛑 Critical: MONGODB_URI is required in production.');
+        process.exit(1);
+      }
+      throw new Error('MONGODB_URI is undefined');
+    }
+
     // Check for placeholder password
     if (uri.includes('<db_password>')) {
       throw new Error('MONGODB_URI contains the "<db_password>" placeholder. You must replace it with your actual password in backend/.env');
@@ -193,13 +206,17 @@ const connectDB = async () => {
     console.log(`🔗 Connecting to: ${maskedURI}`);
 
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 8000, // Wait 8s for Atlas selection
-      connectTimeoutMS: 10000,       // Wait 10s for initial Atlas socket
-      socketTimeoutMS: 45000         // Normal socket timeout
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000
     });
     console.log('✅ MongoDB Atlas Connected Successfully');
   } catch (err) {
-    console.error('❌ MongoDB Connection Error:', err.message);
+    if (err.message === 'MONGODB_URI is undefined') {
+      // Handled above
+    } else {
+      console.error('❌ MongoDB Connection Error:', err.message);
+    }
 
     if (process.env.NODE_ENV === 'development') {
       console.warn('⚠️ Atlas Connection Failed. Switching to In-Memory MongoDB for development...');
