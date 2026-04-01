@@ -14,11 +14,7 @@ import bodyParser from 'body-parser';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import dns from 'dns';
 import { fileURLToPath } from 'url';
-
-// Force use of Google DNS to bypass local ISP/Router DNS resolution issues
-dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 import authRoutes from './routes/authRoutes.js';
 import examRoutes from './routes/examRoutes.js';
