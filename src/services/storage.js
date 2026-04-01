@@ -24,6 +24,7 @@ const StorageService = {
         try {
             const response = await fetch(`${BASE_URL}/upload`, {
                 method: 'POST',
+                headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
                 body: formData,
             });
 
