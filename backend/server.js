@@ -182,25 +182,40 @@ app.post('/api/speaking/upload', auth, upload.single('audio'), (req, res) => {
 // MongoDB Connection with Fallback to In-Memory
 const connectDB = async () => {
   try {
-    const maskedURI = process.env.MONGODB_URI.replace(/:([^@]+)@/, ':****@');
+    const uri = process.env.MONGODB_URI;
+
+    // Check for placeholder password
+    if (uri.includes('<db_password>')) {
+      throw new Error('MONGODB_URI contains the "<db_password>" placeholder. You must replace it with your actual password in backend/.env');
+    }
+
+    const maskedURI = uri.replace(/:([^@]+)@/, ':****@');
     console.log(`🔗 Connecting to: ${maskedURI}`);
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000
+
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 8000, // Wait 8s for Atlas selection
+      connectTimeoutMS: 10000,       // Wait 10s for initial Atlas socket
+      socketTimeoutMS: 45000         // Normal socket timeout
     });
     console.log('✅ MongoDB Atlas Connected Successfully');
   } catch (err) {
-    console.error('❌ Atlas Connection Error Details:', err.message);
-    console.warn('⚠️ Atlas Connection Failed. Switching to In-Memory MongoDB for development...');
-    console.warn('⚠️ REAL PROJECT: Set MONGODB_URI in backend/.env to your MongoDB Atlas connection string so tests PERSIST.');
-    try {
-      const { MongoMemoryServer } = await import('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
-      const uri = mongod.getUri();
-      await mongoose.connect(uri);
-      console.log('✅ In-Memory MongoDB Connected');
-      console.warn('⚠️ DATA WILL NOT PERSIST — Restart = all exams/submissions lost. Fix MONGODB_URI in backend/.env for real storage.');
-    } catch (memErr) {
-      console.error('❌ Failed to start In-Memory MongoDB:', memErr);
+    console.error('❌ MongoDB Connection Error:', err.message);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Atlas Connection Failed. Switching to In-Memory MongoDB for development...');
+      try {
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
+        const mongod = await MongoMemoryServer.create();
+        const uri = mongod.getUri();
+        await mongoose.connect(uri);
+        console.log('✅ In-Memory MongoDB Connected Successfully');
+        console.warn('⚠️ DATA IS EPHEMERAL — Restart = lost data. Fix MONGODB_URI in backend/.env for persistent storage.');
+      } catch (memErr) {
+        console.error('❌ Failed to start In-Memory MongoDB fallback:', memErr);
+      }
+    } else {
+      console.error('🛑 Critical: MongoDB Atlas connection required in production mode.');
+      process.exit(1);
     }
   }
 
