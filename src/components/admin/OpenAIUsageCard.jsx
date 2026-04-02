@@ -38,8 +38,8 @@ export default function OpenAIUsageCard() {
                 setData(json)
                 setLastUpdated(new Date())
             }
-        } catch {
-            setError('Unable to fetch usage data')
+        } catch (err) {
+            setError(`Unable to fetch usage data: ${err.message}`)
             setData(null)
         } finally {
             setLoading(false)
