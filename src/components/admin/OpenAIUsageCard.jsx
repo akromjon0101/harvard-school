@@ -26,9 +26,8 @@ export default function OpenAIUsageCard() {
     const fetchUsage = useCallback(async () => {
         setLoading(true)
         setError(null)
-        const url = `${BASE_URL}/openai-usage`
         try {
-            const res  = await fetch(url, {
+            const res  = await fetch(`${BASE_URL}/openai-usage`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
             })
             const json = await res.json()
@@ -39,8 +38,8 @@ export default function OpenAIUsageCard() {
                 setData(json)
                 setLastUpdated(new Date())
             }
-        } catch (err) {
-            setError(`[${url}] ${err.message}`)
+        } catch {
+            setError('Unable to fetch usage data')
             setData(null)
         } finally {
             setLoading(false)
