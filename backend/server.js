@@ -59,8 +59,10 @@ const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    // In development allow any localhost port
-    if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)) {
+    // In development allow any localhost/127.0.0.1 port or local network IP
+    if (process.env.NODE_ENV !== 'production' && (
+      /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+):\d+$/.test(origin)
+    )) {
       return callback(null, true);
     }
     // In production allow configured origins (comma-separated FRONTEND_URL)
@@ -138,19 +140,34 @@ const ALLOWED_MIMES = new Set([
   'audio/mp4',            // .m4a
   'audio/m4a',            // .m4a
   'audio/x-m4a',          // .m4a
+  'audio/aac',            // .aac
+  'audio/x-aac',          // .aac
   'audio/ogg',            // .ogg
   'audio/vorbis',         // .ogg
   'audio/webm',           // .webm audio
   'video/webm',           // .webm (sometimes audio-only webm reports this)
+  'audio/amr',            // .amr
+  'audio/3gpp',           // .3gp (sometimes used for old mobile recordings)
+  'audio/x-mpeg',         // .mp3 variant
+  'application/octet-stream', // Generic fallback
 ]);
 
 const fileFilter = (req, file, cb) => {
-  const extOk = ALLOWED_EXTENSIONS.test(path.extname(file.originalname));
-  const mimeOk = ALLOWED_MIMES.has(file.mimetype.toLowerCase());
+  const ext = path.extname(file.originalname).toLowerCase();
+  const extOk = ALLOWED_EXTENSIONS.test(ext);
+
+  // Split MIME to ignore parameters like codecs
+  const baseMime = file.mimetype.split(';')[0].toLowerCase().trim();
+  const mimeOk = ALLOWED_MIMES.has(baseMime);
+
+  console.log(`📤 Upload attempt: "${file.originalname}" | MIME: "${file.mimetype}" (base: "${baseMime}") | Ext: "${ext}" | Result: ${extOk || mimeOk ? 'PASS' : 'FAIL'}`);
+
   if (extOk || mimeOk) {
     cb(null, true);
   } else {
-    cb(new Error(`Unsupported file type "${file.mimetype}". Allowed: JPEG, PNG, GIF, PDF, MP3, WAV, M4A, OGG.`));
+    const err = new Error(`Unsupported file type "${file.mimetype}". Allowed extensions: JPEG, PNG, GIF, PDF, MP3, WAV, M4A, OGG, AAC, WEBM.`);
+    err.status = 400;
+    cb(err);
   }
 };
 

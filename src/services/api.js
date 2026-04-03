@@ -1,6 +1,15 @@
 // src/services/api.js
 // Normalize: strip trailing slash, ensure path ends with /api
-const _raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace(/\/+$/, '')
+const _envBase = import.meta.env.VITE_API_BASE_URL || ''
+const _defaultBase = 'http://localhost:5001/api'
+
+// 1. If not set, use default
+let _raw = _envBase || _defaultBase
+
+// 2. Strip trailing slashes
+_raw = _raw.replace(/\/+$/, '')
+
+// 3. Ensure it ends with /api (only if it's an absolute URL or we want it to be)
 export const BASE_URL = _raw.endsWith('/api') ? _raw : `${_raw}/api`
 
 // Ping server on app load to wake up Railway from sleep

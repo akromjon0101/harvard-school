@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Mic, Square, Play, RotateCcw, ChevronRight, CheckCircle, Volume2 } from 'lucide-react'
+import { api, BASE_URL } from '../../services/api'
 
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
+const BASE = BASE_URL
 
 // ── TTS sound bars ────────────────────────────────────────────────────────────
 const BAR_HEIGHTS = [0.4, 0.75, 0.55, 1, 0.6, 0.9, 0.45, 0.8, 0.5, 0.7, 0.35, 0.85]
@@ -288,7 +289,8 @@ export default function SpeakingHero({
                     const res  = await fetch(`${BASE}/speaking/upload`, {
                         method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }, body: fd,
                     })
-                    const data = await res.json()
+                    const data = await res.json().catch(() => ({}))
+                    if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`)
                     if (data.url) onUploaded?.(data.url, qIdx)
                 } catch {} finally { setUploading(false) }
             }
@@ -395,7 +397,8 @@ export default function SpeakingHero({
                         const fd = new FormData()
                         fd.append('audio', new File([blob], `speaking_part${sectionIdx}.webm`, { type: mimeType || 'audio/webm' }))
                         const res  = await fetch(`${BASE}/speaking/upload`, { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }, body: fd })
-                        const data = await res.json()
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`)
                         if (data.url) onUploaded?.(data.url)
                     } catch {} finally { setUploading(false) }
                 }

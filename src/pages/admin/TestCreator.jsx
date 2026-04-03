@@ -421,7 +421,7 @@ export default function TestCreator() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
         body: fd,
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`)
       return data.url || null
     } catch (err) {
