@@ -7,7 +7,7 @@
  */
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api } from '../../services/api'
+import { api, BASE_URL } from '../../services/api'
 import '../../styles/test-creator.css'
 import ExamPreviewModal from '../../components/admin/ExamPreviewModal'
 
@@ -186,7 +186,7 @@ const DEFAULT_INSTRUCTIONS = {
   'choose-from-box': 'Choose SIX answers from the box and write the correct letter, A–H, next to Questions 11–16.',
 }
 
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
+const BASE = BASE_URL
 
 function makeSection(title) {
   return { title, instructions: '', questionRange: '', passageContent: '', media: [], questions: [] }
@@ -422,9 +422,10 @@ export default function TestCreator() {
         body: fd,
       })
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`)
       return data.url || null
-    } catch {
-      alert('Upload failed. Please try again.')
+    } catch (err) {
+      alert(`Upload failed: ${err.message || 'Please try again.'}`)
       return null
     } finally {
       setUploading(p => ({ ...p, [key]: false }))
