@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BASE_URL } from '../../services/api';
 
 const QuestionForm = ({ question, onChange, activeModule }) => {
     const [uploading, setUploading] = useState(false);
@@ -14,17 +15,18 @@ const QuestionForm = ({ question, onChange, activeModule }) => {
         const formData = new FormData();
         formData.append('file', file);
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'}/upload`, {
+            const response = await fetch(`${BASE_URL}/upload`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
                 body: formData
             });
             const data = await response.json();
+            if (!response.ok) throw new Error(data.error || `Upload failed (${response.status})`);
             if (data.url) {
                 updateField('image', data.url);
             }
         } catch (err) {
-            alert('Upload failed');
+            alert(`Upload failed: ${err.message || 'Please try again.'}`);
         } finally {
             setUploading(false);
         }

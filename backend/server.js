@@ -179,6 +179,20 @@ app.post('/api/speaking/upload', auth, upload.single('audio'), (req, res) => {
   res.json({ url: fileUrl });
 });
 
+// Multer error handler — converts multer errors to JSON instead of HTML
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
+    }
+    return res.status(400).json({ error: err.message });
+  }
+  if (err && err.message && err.message.startsWith('Unsupported file type')) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
+
 // MongoDB Connection with Fallback to In-Memory
 const connectDB = async () => {
   try {
