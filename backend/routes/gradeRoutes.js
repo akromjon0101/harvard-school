@@ -27,20 +27,39 @@ function clamp10(n) {
 // ── ONE combined API call for both writing + speaking ─────────────────────────
 // Uses gpt-4o-mini (~17x cheaper than gpt-4o) with minimal prompt tokens.
 async function gradeAll(writingText, speakingText) {
-    // Build compact prompt — only include sections that exist
+    const wWords = writingText?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+    const sWords = speakingText?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+
+    // Return 0 immediately for empty/near-empty responses — no API call
+    const result = {};
+    const tooShortWriting  = wWords  < 30;
+    const tooShortSpeaking = sWords  < 20;
+    if (tooShortWriting && writingText?.trim()) {
+        result.writing_score    = 0;
+        result.writing_feedback = `Response too short (${wWords} words). Cannot grade.`;
+        result.writing_criteria = { grammar: 0, vocabulary: 0, structure: 0, coherence: 0 };
+    }
+    if (tooShortSpeaking && speakingText?.trim()) {
+        result.speaking_score    = 0;
+        result.speaking_feedback = `Response too short (${sWords} words). Cannot grade.`;
+        result.speaking_criteria = { pronunciation: 0, grammar: 0, logicalFlow: 0, conversational: 0 };
+    }
+
+    // If both are too short, skip API call entirely
+    const needsWritingGrade  = writingText?.trim()  && !tooShortWriting;
+    const needsSpeakingGrade = speakingText?.trim() && !tooShortSpeaking;
+    if (!needsWritingGrade && !needsSpeakingGrade) return result;
+
+    // Build compact prompt — only include sections that need grading
     const parts = [];
-    if (writingText?.trim()) {
-        parts.push(`WRITING:\n"""${writingText.trim()}"""`);
-    }
-    if (speakingText?.trim()) {
-        parts.push(`SPEAKING:\n"""${speakingText.trim()}"""`);
-    }
+    if (needsWritingGrade)  parts.push(`WRITING:\n"""${writingText.trim()}"""`);
+    if (needsSpeakingGrade) parts.push(`SPEAKING:\n"""${speakingText.trim()}"""`);
 
-    const hasWriting  = Boolean(writingText?.trim());
-    const hasSpeaking = Boolean(speakingText?.trim());
+    const hasWriting  = needsWritingGrade;
+    const hasSpeaking = needsSpeakingGrade;
 
-    // Minimal system prompt — fewer tokens = lower cost
-    const systemMsg = 'English examiner. Grade 0-10. JSON only.';
+    // System prompt
+    const systemMsg = 'You are a strict IELTS examiner. Grade 0-10 (0 = no answer, 1-3 = very weak, 4-5 = below band 5, 6-7 = acceptable, 8-10 = excellent). Be strict: do not inflate scores. Empty or off-topic responses score 0. Return JSON only.';
 
     // Minimal user prompt — describe only what we need
     const schemaWriting  = hasWriting  ? '"writing_score":0,"writing_feedback":"","writing_criteria":{"grammar":0,"vocabulary":0,"structure":0,"coherence":0}' : '';
@@ -79,7 +98,7 @@ async function gradeAll(writingText, speakingText) {
     if (raw.writing_criteria)  for (const k of Object.keys(raw.writing_criteria))  raw.writing_criteria[k]  = clamp10(raw.writing_criteria[k]);
     if (raw.speaking_criteria) for (const k of Object.keys(raw.speaking_criteria)) raw.speaking_criteria[k] = clamp10(raw.speaking_criteria[k]);
 
-    return raw;
+    return { ...result, ...raw };
 }
 
 // ── POST /api/grade ───────────────────────────────────────────────────────────

@@ -110,6 +110,14 @@ GRAMMATICAL RANGE & ACCURACY:
 • Band 5 — Limited range; attempts complex sentences unsuccessfully; frequent grammatical errors
 • Band 4 — Mostly simple sentences; errors are frequent; communication sometimes impeded
 
+━━━ STRICTNESS RULES — APPLY WITHOUT EXCEPTION ━━━
+1. DO NOT award sympathy bands. A weak response must receive the band it deserves.
+2. DO NOT inflate scores because the candidate wrote many words — length without quality is penalised, not rewarded.
+3. Copied/memorised text that does not address the task → Band 0–1 for Task Achievement.
+4. Off-topic response (does not address the question) → maximum Band 3.0 for Task Achievement.
+5. Word count below minimum (150/250) → mandatory -1.0 penalty to Task Achievement/Task Response.
+6. Responses that are mostly filler without substance → maximum Band 4.5.
+
 ━━━ SCORING RULES ━━━
 1. Match descriptors exactly — do not round down "to be safe" or round up "to be encouraging"
 2. Cite specific text evidence for every criterion score
@@ -188,10 +196,17 @@ GRAMMATICAL RANGE & ACCURACY:
 • Band 5 — Basic structures mostly accurate; limited complex forms; frequent errors
 • Band 4 — Mostly simple sentences; frequent errors impede communication
 
+━━━ STRICTNESS RULES — APPLY WITHOUT EXCEPTION ━━━
+1. DO NOT award sympathy bands. A weak response must receive the band it deserves, even if it is Band 2 or Band 3.
+2. DO NOT inflate bands because the candidate "tried" or "attempted". Only evidence in the transcript counts.
+3. Memorised responses (recited without direct relevance to the question) → maximum Band 4.0 for Fluency & Coherence.
+4. Responses in a language other than English → Band 0 for all criteria.
+5. Completely off-topic or nonsensical content → maximum Band 2.5 across all criteria.
+
 ━━━ SCORING RULES ━━━
 1. Match descriptors exactly — award the band the evidence supports
 2. Cite specific transcript evidence for every criterion score
-3. If evidence sits between two bands, re-read descriptors carefully and choose the best fit — do not default to lower or higher
+3. If evidence sits between two bands, re-read descriptors carefully and choose the best fit
 4. Overall band = mean of 4 criteria, rounded to nearest 0.5 (do not manually adjust)
 5. Pronunciation = mirror of GRA score, capped at 6.5
 
@@ -205,18 +220,19 @@ export async function gradeWritingTask(text, taskIndex, imageUrl = null, taskPro
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
 
     const wordCount0 = text?.trim().split(/\s+/).filter(Boolean).length ?? 0;
-    if (wordCount0 < 10) {
+    if (wordCount0 < 30) {
         return {
             band: 0, wordCount: wordCount0,
             criteria: {
-                taskAchievement:   { band: 0, comment: 'No meaningful response submitted.' },
-                coherenceCohesion: { band: 0, comment: 'No meaningful response submitted.' },
-                lexicalResource:   { band: 0, comment: 'No meaningful response submitted.' },
-                grammaticalRange:  { band: 0, comment: 'No meaningful response submitted.' },
+                taskAchievement:   { band: 0, comment: wordCount0 === 0 ? 'No response submitted.' : `Only ${wordCount0} words — far below minimum. Cannot assess.` },
+                coherenceCohesion: { band: 0, comment: 'Insufficient text to evaluate.' },
+                lexicalResource:   { band: 0, comment: 'Insufficient text to evaluate.' },
+                grammaticalRange:  { band: 0, comment: 'Insufficient text to evaluate.' },
             },
-            strengths: [], weaknesses: ['No meaningful response submitted.'],
+            strengths: [],
+            weaknesses: [wordCount0 === 0 ? 'No response submitted.' : `Only ${wordCount0} words written. Task 1 requires 150 words minimum; Task 2 requires 250 words minimum.`],
             improvementAdvice: ['Write at least 150 words for Task 1 or 250 words for Task 2.'],
-            feedback: 'No valid writing response detected.',
+            feedback: wordCount0 === 0 ? 'No writing response submitted.' : `Response too short (${wordCount0} words). Cannot grade responses below 30 words.`,
         };
     }
 
@@ -474,9 +490,15 @@ export async function gradeSpeakingWithContext(transcript, partLabel = 'Part 1',
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
 
     // Hard guard: reject empty / near-empty transcripts before calling AI
+    // < 20 words = background noise / silence / non-answer → band 0, no API call
     const wordCount = transcript?.trim().split(/\s+/).filter(Boolean).length ?? 0;
-    if (wordCount < 5) {
-        return emptyBandResult('No valid spoken response detected (fewer than 5 words).', partLabel);
+    if (wordCount < 20) {
+        return emptyBandResult(
+            wordCount === 0
+                ? 'No spoken response detected.'
+                : `Response too short to assess (${wordCount} words). Minimum ~20 words required for any band score.`,
+            partLabel
+        );
     }
 
     const isP2 = /part\s*2/i.test(partLabel);
@@ -590,14 +612,14 @@ Overall band = mean of 4 criteria, rounded to nearest 0.5`,
             if (raw.criteria.lexicalResource?.band   > 3.0) raw.criteria.lexicalResource.band   = 3.0;
             console.log(`[AI] Off-topic response detected for ${partLabel} — applying band caps`);
         }
-        // Hard cap for very short transcripts (5–20 words)
-        if (wordCount < 10) {
+        // Hard cap for short transcripts (20–49 words = very limited content)
+        if (wordCount < 30) {
             for (const key of Object.keys(raw.criteria)) {
-                if (raw.criteria[key]?.band > 2.0) raw.criteria[key].band = 2.0;
+                if (raw.criteria[key]?.band > 2.5) raw.criteria[key].band = 2.5;
             }
-        } else if (wordCount < 20) {
+        } else if (wordCount < 50) {
             for (const key of Object.keys(raw.criteria)) {
-                if (raw.criteria[key]?.band > 3.0) raw.criteria[key].band = 3.0;
+                if (raw.criteria[key]?.band > 3.5) raw.criteria[key].band = 3.5;
             }
         }
         const vals = Object.values(raw.criteria).map(c => c.band).filter(b => typeof b === 'number');
@@ -689,8 +711,12 @@ export async function gradePracticeSpeaking(transcript, question) {
     if (!openai) throw new Error('OPENAI_API_KEY is not configured');
 
     const wordCount = transcript?.trim().split(/\s+/).filter(Boolean).length ?? 0;
-    if (wordCount < 5) {
-        return emptyBandResult('No valid spoken response detected (fewer than 5 words).');
+    if (wordCount < 20) {
+        return emptyBandResult(
+            wordCount === 0
+                ? 'No spoken response detected.'
+                : `Response too short to assess (${wordCount} words). Minimum ~20 words required.`
+        );
     }
 
     const jsonSchema = `{
