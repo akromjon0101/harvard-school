@@ -2183,13 +2183,22 @@ function SpeakingQuestionList({ value, onChange }) {
  *  - Answer: a lone letter line OR "Answer: X" / "ANSWER: X" / "*X"
  */
 function parseBulkMCQ(raw, startNum, defaultInstruction) {
+  // Split on blank line OR on a line that starts a new question number (e.g. "1.", "2.")
   const blocks = raw.trim().split(/\n{2,}/)
   const questions = []
   let qNum = startNum
 
+  // Detect an option line in any common format:
+  //   A. text  /  A) text  /  (A) text  /  A - text  /  A: text  /  A  text
+  // Handles optional leading bracket, optional space between letter and delimiter
+  const OPT_RE = /^[(\[]?\s*([A-Ja-j])\s*[)\].:\-–—]\s*(.+)/i
+
+  // Detect an answer-only line:  "C"  /  "Answer: C"  /  "Javob: C"  /  "*C"
+  const ANS_RE = /^(?:(?:answer|javob|ans)\s*[:：]\s*|\*\s*)?([A-Ja-j])\.?\s*$/i
+
   for (const block of blocks) {
     const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
-    if (lines.length < 2) continue
+    if (lines.length < 1) continue
 
     const options = []
     let questionLines = []
@@ -2197,38 +2206,38 @@ function parseBulkMCQ(raw, startNum, defaultInstruction) {
     let foundOptions = false
 
     for (const line of lines) {
-      // Option line: A. text / A) text / (A) text / A - text
-      const optMatch = line.match(/^[(\[]?([A-Ja-j])[)\].:\-]\s+(.+)/)
+      const optMatch = line.match(OPT_RE)
       if (optMatch) {
         foundOptions = true
         options.push(optMatch[2].trim())
         continue
       }
-      // Answer line: lone letter, "Answer: B", "ANSWER: B", "*B"
-      const ansMatch = line.match(/^(?:answer[:：]\s*|\*)?([A-Ja-j])\.?\s*$/i)
-      if (ansMatch && (foundOptions || line.length <= 8)) {
+
+      const ansMatch = line.match(ANS_RE)
+      if (ansMatch && (foundOptions || line.length <= 10)) {
         correctAnswer = ansMatch[1].toUpperCase()
         continue
       }
-      // Otherwise it's question text
+
+      // Strip leading question number if present: "1. text" → "text"
+      const stripped = line.replace(/^\d+[.)]\s*/, '')
       if (!foundOptions) {
-        questionLines.push(line)
+        questionLines.push(stripped)
       }
     }
 
     const questionText = questionLines.join(' ').trim()
-    if (!questionText && options.length === 0) continue
+    // Need at least a question OR at least 2 real options
+    if (!questionText && options.filter(Boolean).length < 2) continue
 
-    // Pad to at least 4 options
-    while (options.length < 4) options.push('')
-
+    // Do NOT pad with empty strings — only keep real options
     questions.push({
       type: 'mcq',
       questionNumber: qNum,
       startNumber: qNum,
       instructionText: defaultInstruction,
       questionText,
-      options,
+      options,           // real options only, no empty padding
       correctAnswer,
       correctAnswers: [],
       matchingItems: [],
