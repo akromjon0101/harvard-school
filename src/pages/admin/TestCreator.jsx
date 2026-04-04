@@ -2183,67 +2183,86 @@ function SpeakingQuestionList({ value, onChange }) {
  *  - Answer: a lone letter line OR "Answer: X" / "ANSWER: X" / "*X"
  */
 function parseBulkMCQ(raw, startNum, defaultInstruction) {
-  // Split on blank line OR on a line that starts a new question number (e.g. "1.", "2.")
-  const blocks = raw.trim().split(/\n{2,}/)
+  // Normalize line endings
+  const lines = raw.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').map(l => l.trim())
+
+  // Option line: A. text / A) text / (A) text / A - text / A: text
+  const OPT_RE = /^[(\[]?\s*([A-Ja-j])\s*[)\].:\-\u2013\u2014]\s*(.+)/i
+  // Answer line: "C" / "Answer: C" / "Javob: C" / "*C"
+  const ANS_RE = /^(?:(?:answer|javob|ans|to['']g['']ri|togri)\s*[:：]?\s*|\*\s*)?([A-Ja-j])\.?\s*$/i
+  // New question start: line starts with number — "1.", "1)", "Q1.", "Q1)"
+  const QNUM_RE = /^(?:q\s*)?\d+[.)]\s+\S/i
+
   const questions = []
   let qNum = startNum
 
-  // Detect an option line in any common format:
-  //   A. text  /  A) text  /  (A) text  /  A - text  /  A: text  /  A  text
-  // Handles optional leading bracket, optional space between letter and delimiter
-  const OPT_RE = /^[(\[]?\s*([A-Ja-j])\s*[)\].:\-–—]\s*(.+)/i
+  // State for current question being built
+  let qText = []
+  let opts = []
+  let ans = ''
+  let inOptions = false
 
-  // Detect an answer-only line:  "C"  /  "Answer: C"  /  "Javob: C"  /  "*C"
-  const ANS_RE = /^(?:(?:answer|javob|ans)\s*[:：]\s*|\*\s*)?([A-Ja-j])\.?\s*$/i
-
-  for (const block of blocks) {
-    const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
-    if (lines.length < 1) continue
-
-    const options = []
-    let questionLines = []
-    let correctAnswer = ''
-    let foundOptions = false
-
-    for (const line of lines) {
-      const optMatch = line.match(OPT_RE)
-      if (optMatch) {
-        foundOptions = true
-        options.push(optMatch[2].trim())
-        continue
-      }
-
-      const ansMatch = line.match(ANS_RE)
-      if (ansMatch && (foundOptions || line.length <= 10)) {
-        correctAnswer = ansMatch[1].toUpperCase()
-        continue
-      }
-
-      // Strip leading question number if present: "1. text" → "text"
-      const stripped = line.replace(/^\d+[.)]\s*/, '')
-      if (!foundOptions) {
-        questionLines.push(stripped)
-      }
-    }
-
-    const questionText = questionLines.join(' ').trim()
-    // Need at least a question OR at least 2 real options
-    if (!questionText && options.filter(Boolean).length < 2) continue
-
-    // Do NOT pad with empty strings — only keep real options
+  const flush = () => {
+    const questionText = qText.join(' ').trim()
+    if (!questionText && opts.length === 0) return
+    if (opts.length === 0) return // skip if no options at all
     questions.push({
       type: 'mcq',
       questionNumber: qNum,
       startNumber: qNum,
       instructionText: defaultInstruction,
       questionText,
-      options,           // real options only, no empty padding
-      correctAnswer,
+      options: opts,
+      correctAnswer: ans,
       correctAnswers: [],
       matchingItems: [],
     })
     qNum++
+    qText = []; opts = []; ans = ''; inOptions = false
   }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!line) continue // skip empty lines
+
+    const optMatch = line.match(OPT_RE)
+    const ansMatch = line.match(ANS_RE)
+    const isNewQ = QNUM_RE.test(line)
+
+    if (optMatch) {
+      inOptions = true
+      opts.push(optMatch[2].trim())
+      continue
+    }
+
+    if (ansMatch && (inOptions || line.length <= 3)) {
+      ans = ansMatch[1].toUpperCase()
+      // Peek: if next non-empty line is a new question or option A, flush now
+      const next = lines.slice(i + 1).find(l => l.trim())
+      const nextIsNewQ = next && (QNUM_RE.test(next) || !next.match(OPT_RE))
+      if (nextIsNewQ || i === lines.length - 1) flush()
+      continue
+    }
+
+    if (isNewQ) {
+      // Starting a new numbered question — flush previous if any options collected
+      if (opts.length > 0 || qText.length > 0) flush()
+      const stripped = line.replace(/^(?:q\s*)?\d+[.)]\s+/i, '')
+      qText.push(stripped)
+      continue
+    }
+
+    // Plain text line
+    if (inOptions) {
+      // Text after options but not an answer — treat as continuation of last option
+      if (opts.length > 0) opts[opts.length - 1] += ' ' + line
+    } else {
+      qText.push(line)
+    }
+  }
+
+  // Flush the last question
+  flush()
 
   return questions
 }
