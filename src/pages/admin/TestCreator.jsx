@@ -295,6 +295,35 @@ export default function TestCreator() {
     })
   }
 
+  // Recalculate sequential startNumber/questionNumber for every question in the array.
+  // Prevents gaps/duplicates after bulk import, delete, or reorder.
+  const reindexQuestions = (questions) => {
+    let nextNum = 1
+    return questions.map(q => {
+      const start = nextNum
+      let count = 1
+      const type = q.type
+      if (type === 'tfng' || type === 'true-false-notgiven') {
+        const lines = (q.questionText || '').split('\n').filter(l => l.trim()).length
+        count = Math.max(1, lines)
+      } else if (type === 'gap-fill' || type === 'summary-completion' || type === 'summary-phrase-bank') {
+        const gaps = (q.questionText?.match(/\[gap\]/gi) || []).length
+        count = Math.max(1, gaps)
+      } else if (type === 'table-completion') {
+        const tableGaps = q.tableData?.rows
+          ? q.tableData.rows.reduce((a, row) => a + (Array.isArray(row) ? row.reduce((b, c) => b + ((c || '').match(/\[gap\]/gi) || []).length, 0) : 0), 0)
+          : 0
+        count = Math.max(1, tableGaps)
+      } else if (type === 'matching' || type === 'map-labeling' || type === 'matching-headings' || type === 'choose-from-box') {
+        count = Math.max(1, (q.matchingItems || []).length)
+      } else if (type === 'mcq-multi' || type === 'checkbox') {
+        count = 2
+      }
+      nextNum = start + count
+      return { ...q, startNumber: start, questionNumber: start }
+    })
+  }
+
   const getNextStart = () => {
     // Scoped to the current module only so reading always starts from 1
     let last = 0
@@ -369,9 +398,10 @@ export default function TestCreator() {
   const addMultipleQuestions = (newQuestions) => {
     setSections(prev => {
       const arr = [...prev[currentKey.mod]]
+      const combined = [...arr[currentKey.idx].questions, ...newQuestions]
       arr[currentKey.idx] = {
         ...arr[currentKey.idx],
-        questions: [...arr[currentKey.idx].questions, ...newQuestions],
+        questions: reindexQuestions(combined),
       }
       return { ...prev, [currentKey.mod]: arr }
     })
@@ -382,9 +412,10 @@ export default function TestCreator() {
   const removeQuestion = (qIdx) => {
     setSections(prev => {
       const arr = [...prev[currentKey.mod]]
+      const filtered = arr[currentKey.idx].questions.filter((_, i) => i !== qIdx)
       arr[currentKey.idx] = {
         ...arr[currentKey.idx],
-        questions: arr[currentKey.idx].questions.filter((_, i) => i !== qIdx),
+        questions: reindexQuestions(filtered),
       }
       return { ...prev, [currentKey.mod]: arr }
     })
@@ -1657,23 +1688,49 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
             />
           </div>
           <div className="tc-field">
-            <label className="tc-label">2. Variantlar (A, B, C… H) — qutida ko‘rinadi</label>
-            <div className="tc-items-list">
-              {Array.from({ length: 8 }).map((_, i) => (
+            <div className="tc-label-row">
+              <label className="tc-label">2. Variantlar (A, B, C...H) — qutida korinadi</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '11px', color: '#9d174d', fontWeight: 600 }}>
+                  {(q.options || []).filter(Boolean).length} / 8
+                </span>
+                {(q.options || []).length < 8 && (
+                  <button
+                    className="tc-add-option-btn"
+                    style={{ margin: 0 }}
+                    onClick={() => update('options', [...(q.options || []), ''])}
+                  >
+                    + Variant qoshish
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="tc-options-list">
+              {(q.options || []).map((opt, i) => (
                 <div key={i} className="tc-option-row">
                   <span className="tc-option-letter">{String.fromCharCode(65 + i)}</span>
                   <input
                     className="tc-input"
-                    value={(q.options || [])[i] || ''}
+                    value={opt}
                     onChange={e => {
-                      const o = [...(q.options || [])]; while (o.length <= i) o.push(''); o[i] = e.target.value
-                      update('options', o.slice(0, 8))
+                      const o = [...q.options]; o[i] = e.target.value
+                      update('options', o)
                     }}
-                    placeholder={`${String.fromCharCode(65 + i)} variant matni`}
+                    placeholder={`Option ${String.fromCharCode(65 + i)}`}
                   />
+                  <button
+                    className="tc-remove-btn"
+                    onClick={() => update('options', q.options.filter((_, j) => j !== i))}
+                    title={`Remove option ${String.fromCharCode(65 + i)}`}
+                  >x</button>
                 </div>
               ))}
             </div>
+            {(q.options || []).length === 0 && (
+              <p style={{ fontSize: '12px', color: '#9ca3af', margin: '6px 0 0' }}>
+                No options yet. Click &quot;+ Variant qoshish&quot; to add.
+              </p>
+            )}
           </div>
           <div className="tc-field">
             <label className="tc-label">3. Savollar (har biriga bitta harf tanlanadi)</label>
@@ -1700,7 +1757,7 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
                 className="tc-add-item-btn"
                 onClick={() => update('matchingItems', [...(q.matchingItems || []), ''])}
               >
-                + Savol qo‘shish
+                + Savol qo'shish
               </button>
             </div>
           </div>

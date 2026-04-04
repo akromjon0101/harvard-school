@@ -8,6 +8,7 @@ import SummaryCompletion from './SummaryCompletion';
 import SummaryPhraseBank from './SummaryPhraseBank';
 import MatchingHeadings from './MatchingHeadings';
 import ChooseFromBox from './ChooseFromBox';
+import TrueFalseNotGiven from './TrueFalseNotGiven';
 
 const QuestionRenderer = ({ type, data, value, onChange, qNumber, hideInstruction }) => {
 
@@ -45,8 +46,8 @@ const QuestionRenderer = ({ type, data, value, onChange, qNumber, hideInstructio
             case 'tfng':
             case 'true-false-notgiven':
                 return (
-                    <GapFill
-                        data={{ ...data, questionText: data.questionText + " [gap]" }}
+                    <TrueFalseNotGiven
+                        data={data}
                         value={value}
                         onChange={onChange}
                         startNumber={data.startNumber || qNumber}

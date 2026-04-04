@@ -563,6 +563,9 @@ export default function SpeakingHero({
                         <Volume2 size={14} />
                     </button>
                 </div>
+                {questionText && (
+                    <p className="sh-question-text">{questionText}</p>
+                )}
             </div>
 
             {/* Phase UI */}

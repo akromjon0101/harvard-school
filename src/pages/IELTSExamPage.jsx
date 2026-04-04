@@ -90,6 +90,11 @@ function getCaretOffset(container, targetNode, targetOffset) {
 // Count how many question slots a question block occupies
 function getQCount(q) {
     if (!q) return 0
+    // TFNG: each non-empty line = one question
+    if (q.type === 'tfng' || q.type === 'true-false-notgiven') {
+        const lines = (q.questionText || '').split('\n').filter(l => l.trim()).length
+        return Math.max(lines, 1)
+    }
     const gaps = (q.questionText?.match(/\[gap\]/gi) || []).length
     const matchLen = (q.matchingItems || []).length
     const tableGaps = q.type === 'table-completion' && q.tableData?.rows
