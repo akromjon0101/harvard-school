@@ -1324,79 +1324,126 @@
 .ip-tfng-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .ip-tfng-row {
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 0;
   background: #fff;
+  border: 1.5px solid #e8edf4;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .ip-tfng-row:hover {
-  border-color: #c7d2fe;
-  background: #fafbff;
+  border-color: #b8c8e8;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .ip-tfng-q-header {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  padding: 14px 16px;
+  min-width: 0;
 }
 
 .ip-tfng-statement {
-  font-size: 14.5px;
+  font-size: 14px;
   font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
   color: #1e293b;
-  line-height: 1.55;
+  line-height: 1.5;
   flex: 1;
 }
 
 .ip-tfng-options {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding-left: 36px;
+  align-items: stretch;
+  flex-shrink: 0;
+  border-left: 1.5px solid #e8edf4;
 }
 
 .ip-tfng-option {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 7px 16px;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 8px;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 18px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   font-family: Arial, sans-serif;
-  color: #475569;
+  letter-spacing: 0.04em;
+  color: #64748b;
   background: #f8fafc;
-  transition: all 0.15s;
+  border: none;
+  border-right: 1.5px solid #e8edf4;
+  transition: background 0.13s, color 0.13s;
   user-select: none;
+  min-width: 72px;
+}
+
+.ip-tfng-option:last-child {
+  border-right: none;
 }
 
 .ip-tfng-option:hover {
-  border-color: #0053a0;
-  color: #0053a0;
-  background: #eef4ff;
+  background: #f1f5f9;
+  color: #334155;
 }
 
-.ip-tfng-option.ip-tfng-selected {
-  border-color: #0053a0;
-  background: #0053a0;
+/* TRUE — green */
+.ip-tfng-option[data-val="TRUE"]:hover,
+.ip-tfng-option[data-val="YES"]:hover {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.ip-tfng-option[data-val="TRUE"].ip-tfng-selected,
+.ip-tfng-option[data-val="YES"].ip-tfng-selected {
+  background: #16a34a;
+  color: #fff;
+}
+
+/* FALSE — red */
+.ip-tfng-option[data-val="FALSE"]:hover,
+.ip-tfng-option[data-val="NO"]:hover {
+  background: #fff1f2;
+  color: #dc2626;
+}
+.ip-tfng-option[data-val="FALSE"].ip-tfng-selected,
+.ip-tfng-option[data-val="NO"].ip-tfng-selected {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* NOT GIVEN — amber */
+.ip-tfng-option[data-val="NOT GIVEN"]:hover {
+  background: #fffbeb;
+  color: #b45309;
+}
+.ip-tfng-option[data-val="NOT GIVEN"].ip-tfng-selected {
+  background: #d97706;
   color: #fff;
 }
 
 .ip-tfng-radio-dot {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 2px solid currentColor;
   flex-shrink: 0;
   position: relative;
+  transition: background 0.13s;
+}
+
+.ip-tfng-option.ip-tfng-selected .ip-tfng-radio-dot {
+  background: rgba(255,255,255,0.3);
+  border-color: rgba(255,255,255,0.8);
 }
 
 .ip-tfng-option.ip-tfng-selected .ip-tfng-radio-dot::after {

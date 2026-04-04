@@ -37,6 +37,7 @@ const TrueFalseNotGiven = ({ data = {}, value = {}, onChange, startNumber, qNumb
                                     <div
                                         key={opt}
                                         className={`ip-tfng-option${selected === opt ? ' ip-tfng-selected' : ''}`}
+                                        data-val={opt}
                                         onClick={() => onChange(qNum, opt)}
                                         role="radio"
                                         aria-checked={selected === opt}
