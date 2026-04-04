@@ -1324,138 +1324,105 @@
 .ip-tfng-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ip-tfng-row {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 14px;
   background: #fff;
-  border: 1.5px solid #e8edf4;
-  border-radius: 12px;
-  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .ip-tfng-row:hover {
-  border-color: #b8c8e8;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
 }
 
-.ip-tfng-q-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  padding: 14px 16px;
-  min-width: 0;
+.ip-tfng-row.ip-tfng-answered {
+  border-color: #c7d7f0;
+  background: #f8fbff;
 }
 
 .ip-tfng-statement {
+  flex: 1;
   font-size: 14px;
   font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
   color: #1e293b;
-  line-height: 1.5;
-  flex: 1;
+  line-height: 1.55;
+  min-width: 0;
 }
 
 .ip-tfng-options {
   display: flex;
-  align-items: stretch;
+  gap: 6px;
   flex-shrink: 0;
-  border-left: 1.5px solid #e8edf4;
 }
 
-.ip-tfng-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 18px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: Arial, sans-serif;
-  letter-spacing: 0.04em;
-  color: #64748b;
+.ip-tfng-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1.5px solid #e2e8f0;
   background: #f8fafc;
-  border: none;
-  border-right: 1.5px solid #e8edf4;
-  transition: background 0.13s, color 0.13s;
-  user-select: none;
-  min-width: 72px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: Arial, sans-serif;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  outline: none;
 }
 
-.ip-tfng-option:last-child {
-  border-right: none;
-}
-
-.ip-tfng-option:hover {
-  background: #f1f5f9;
+.ip-tfng-btn:hover {
+  border-color: #94a3b8;
   color: #334155;
+  background: #f1f5f9;
 }
 
-/* TRUE — green */
-.ip-tfng-option[data-val="TRUE"]:hover,
-.ip-tfng-option[data-val="YES"]:hover {
-  background: #f0fdf4;
+/* TRUE */
+.ip-tfng-btn[data-val="TRUE"]:hover,
+.ip-tfng-btn[data-val="YES"]:hover {
+  border-color: #16a34a;
   color: #15803d;
+  background: #f0fdf4;
 }
-.ip-tfng-option[data-val="TRUE"].ip-tfng-selected,
-.ip-tfng-option[data-val="YES"].ip-tfng-selected {
+.ip-tfng-btn[data-val="TRUE"].active,
+.ip-tfng-btn[data-val="YES"].active {
+  border-color: #16a34a;
   background: #16a34a;
   color: #fff;
 }
 
-/* FALSE — red */
-.ip-tfng-option[data-val="FALSE"]:hover,
-.ip-tfng-option[data-val="NO"]:hover {
-  background: #fff1f2;
+/* FALSE */
+.ip-tfng-btn[data-val="FALSE"]:hover,
+.ip-tfng-btn[data-val="NO"]:hover {
+  border-color: #dc2626;
   color: #dc2626;
+  background: #fff1f2;
 }
-.ip-tfng-option[data-val="FALSE"].ip-tfng-selected,
-.ip-tfng-option[data-val="NO"].ip-tfng-selected {
+.ip-tfng-btn[data-val="FALSE"].active,
+.ip-tfng-btn[data-val="NO"].active {
+  border-color: #dc2626;
   background: #dc2626;
   color: #fff;
 }
 
-/* NOT GIVEN — amber */
-.ip-tfng-option[data-val="NOT GIVEN"]:hover {
-  background: #fffbeb;
+/* NOT GIVEN */
+.ip-tfng-btn[data-val="NOT GIVEN"]:hover {
+  border-color: #d97706;
   color: #b45309;
+  background: #fffbeb;
 }
-.ip-tfng-option[data-val="NOT GIVEN"].ip-tfng-selected {
+.ip-tfng-btn[data-val="NOT GIVEN"].active {
+  border-color: #d97706;
   background: #d97706;
   color: #fff;
-}
-
-.ip-tfng-radio-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  flex-shrink: 0;
-  position: relative;
-  transition: background 0.13s;
-}
-
-.ip-tfng-option.ip-tfng-selected .ip-tfng-radio-dot {
-  background: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.8);
-}
-
-.ip-tfng-option.ip-tfng-selected .ip-tfng-radio-dot::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.ip-tfng-opt-label {
-  white-space: nowrap;
 }
 
 /* ── MCQ ──────────────────────────────────────────────────────────── */

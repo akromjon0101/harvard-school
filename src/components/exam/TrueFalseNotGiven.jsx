@@ -27,26 +27,20 @@ const TrueFalseNotGiven = ({ data = {}, value = {}, onChange, startNumber, qNumb
                     const qNum = baseNum + i;
                     const selected = value[qNum] || '';
                     return (
-                        <div key={i} className="ip-tfng-row">
-                            <div className="ip-tfng-q-header">
-                                <span className="q-num-square">{qNum}</span>
-                                <span className="ip-tfng-statement">{statement}</span>
-                            </div>
+                        <div key={i} className={`ip-tfng-row${selected ? ' ip-tfng-answered' : ''}`}>
+                            <span className="q-num-square">{qNum}</span>
+                            <span className="ip-tfng-statement">{statement}</span>
                             <div className="ip-tfng-options">
                                 {options.map(opt => (
-                                    <div
+                                    <button
                                         key={opt}
-                                        className={`ip-tfng-option${selected === opt ? ' ip-tfng-selected' : ''}`}
+                                        type="button"
+                                        className={`ip-tfng-btn${selected === opt ? ' active' : ''}`}
                                         data-val={opt}
                                         onClick={() => onChange(qNum, opt)}
-                                        role="radio"
-                                        aria-checked={selected === opt}
-                                        tabIndex={0}
-                                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onChange(qNum, opt) }}
                                     >
-                                        <span className="ip-tfng-radio-dot" />
-                                        <span className="ip-tfng-opt-label">{opt}</span>
-                                    </div>
+                                        {opt}
+                                    </button>
                                 ))}
                             </div>
                         </div>
