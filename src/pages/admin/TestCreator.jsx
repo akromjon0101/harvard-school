@@ -295,31 +295,48 @@ export default function TestCreator() {
     })
   }
 
-  // Recalculate sequential startNumber/questionNumber for every question in the array.
-  // Prevents gaps/duplicates after bulk import, delete, or reorder.
-  const reindexQuestions = (questions) => {
-    let nextNum = 1
+  // How many question slots does a single question block occupy?
+  const getQCountFromQ = (q) => {
+    const type = q.type
+    if (type === 'tfng' || type === 'true-false-notgiven') {
+      return Math.max(1, (q.questionText || '').split('\n').filter(l => l.trim()).length)
+    }
+    if (type === 'gap-fill' || type === 'summary-completion' || type === 'summary-phrase-bank') {
+      return Math.max(1, (q.questionText?.match(/\[gap\]/gi) || []).length)
+    }
+    if (type === 'table-completion') {
+      const tg = q.tableData?.rows
+        ? q.tableData.rows.reduce((a, row) => a + (Array.isArray(row) ? row.reduce((b, c) => b + ((c || '').match(/\[gap\]/gi) || []).length, 0) : 0), 0)
+        : 0
+      return Math.max(1, tg)
+    }
+    if (type === 'matching' || type === 'map-labeling' || type === 'matching-headings' || type === 'choose-from-box') {
+      return Math.max(1, (q.matchingItems || []).length)
+    }
+    if (type === 'mcq-multi' || type === 'checkbox') return 2
+    return 1
+  }
+
+  // Compute the first question number for a given section index
+  // by looking at how many slots previous sections already used.
+  const getSectionStart = (sectionsArr, sectionIdx) => {
+    let last = 0
+    sectionsArr.forEach((sec, si) => {
+      if (si >= sectionIdx) return
+      sec.questions.forEach(q => {
+        const s = q.startNumber || q.questionNumber || 1
+        last = Math.max(last, s + getQCountFromQ(q) - 1)
+      })
+    })
+    return last + 1
+  }
+
+  // Recalculate sequential startNumber/questionNumber starting from startFrom.
+  const reindexQuestions = (questions, startFrom = 1) => {
+    let nextNum = startFrom
     return questions.map(q => {
       const start = nextNum
-      let count = 1
-      const type = q.type
-      if (type === 'tfng' || type === 'true-false-notgiven') {
-        const lines = (q.questionText || '').split('\n').filter(l => l.trim()).length
-        count = Math.max(1, lines)
-      } else if (type === 'gap-fill' || type === 'summary-completion' || type === 'summary-phrase-bank') {
-        const gaps = (q.questionText?.match(/\[gap\]/gi) || []).length
-        count = Math.max(1, gaps)
-      } else if (type === 'table-completion') {
-        const tableGaps = q.tableData?.rows
-          ? q.tableData.rows.reduce((a, row) => a + (Array.isArray(row) ? row.reduce((b, c) => b + ((c || '').match(/\[gap\]/gi) || []).length, 0) : 0), 0)
-          : 0
-        count = Math.max(1, tableGaps)
-      } else if (type === 'matching' || type === 'map-labeling' || type === 'matching-headings' || type === 'choose-from-box') {
-        count = Math.max(1, (q.matchingItems || []).length)
-      } else if (type === 'mcq-multi' || type === 'checkbox') {
-        count = 2
-      }
-      nextNum = start + count
+      nextNum = start + getQCountFromQ(q)
       return { ...q, startNumber: start, questionNumber: start }
     })
   }
@@ -398,10 +415,11 @@ export default function TestCreator() {
   const addMultipleQuestions = (newQuestions) => {
     setSections(prev => {
       const arr = [...prev[currentKey.mod]]
+      const startFrom = getSectionStart(arr, currentKey.idx)
       const combined = [...arr[currentKey.idx].questions, ...newQuestions]
       arr[currentKey.idx] = {
         ...arr[currentKey.idx],
-        questions: reindexQuestions(combined),
+        questions: reindexQuestions(combined, startFrom),
       }
       return { ...prev, [currentKey.mod]: arr }
     })
@@ -412,10 +430,11 @@ export default function TestCreator() {
   const removeQuestion = (qIdx) => {
     setSections(prev => {
       const arr = [...prev[currentKey.mod]]
+      const startFrom = getSectionStart(arr, currentKey.idx)
       const filtered = arr[currentKey.idx].questions.filter((_, i) => i !== qIdx)
       arr[currentKey.idx] = {
         ...arr[currentKey.idx],
-        questions: reindexQuestions(filtered),
+        questions: reindexQuestions(filtered, startFrom),
       }
       return { ...prev, [currentKey.mod]: arr }
     })
@@ -2211,16 +2230,32 @@ function BulkMCQImport({ getNextStart, defaultInstruction, onImport, onCancel })
   const [text, setText] = useState('')
   const [parsed, setParsed] = useState(null)
   const [instructionText, setInstructionText] = useState(defaultInstruction)
+  const [customStart, setCustomStart] = useState(null) // null = use getNextStart()
+
+  const effectiveStart = customStart !== null ? customStart : getNextStart()
 
   const handleParse = () => {
-    const start = getNextStart()
+    const start = effectiveStart
     const questions = parseBulkMCQ(text, start, instructionText)
     setParsed(questions)
+    if (customStart === null) setCustomStart(start)
+  }
+
+  // When admin changes the starting number, renumber all parsed questions in sequence
+  const handleChangeStart = (val) => {
+    const num = Math.max(1, parseInt(val) || 1)
+    setCustomStart(num)
+    if (parsed && parsed.length > 0) {
+      let next = num
+      setParsed(parsed.map(q => {
+        const s = next++
+        return { ...q, startNumber: s, questionNumber: s }
+      }))
+    }
   }
 
   const handleImport = () => {
     if (!parsed || parsed.length === 0) return
-    // Apply current instructionText to all
     onImport(parsed.map(q => ({ ...q, instructionText })))
   }
 
@@ -2278,6 +2313,28 @@ Answer: A`
         </span>
       </div>
 
+      {/* Starting question number control */}
+      <div className="tc-field-row" style={{ marginBottom: 12, alignItems: 'flex-end', gap: 12 }}>
+        <div className="tc-field" style={{ maxWidth: 200, margin: 0 }}>
+          <label className="tc-label">Starting Question Number</label>
+          <input
+            className="tc-input"
+            type="number"
+            min={1}
+            value={effectiveStart}
+            onChange={e => handleChangeStart(e.target.value)}
+          />
+          <span className="tc-hint">
+            Auto: {getNextStart()} — change if needed
+          </span>
+        </div>
+        {parsed && parsed.length > 0 && (
+          <div style={{ fontSize: '12px', color: '#4f46e5', fontWeight: 600, paddingBottom: 4 }}>
+            Q{parsed[0].startNumber} – Q{parsed[parsed.length - 1].startNumber}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16 }}>
         <button
           className="tc-preset"
@@ -2294,7 +2351,7 @@ Answer: A`
         >
           ✓ Import {parsed ? parsed.length : 0} Question{parsed?.length !== 1 ? 's' : ''}
         </button>
-        <button className="tc-btn-ghost" style={{ fontSize: '12px' }} onClick={() => { setText(''); setParsed(null) }}>
+        <button className="tc-btn-ghost" style={{ fontSize: '12px' }} onClick={() => { setText(''); setParsed(null); setCustomStart(null) }}>
           Clear
         </button>
       </div>
