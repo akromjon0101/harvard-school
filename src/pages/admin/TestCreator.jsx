@@ -412,14 +412,27 @@ export default function TestCreator() {
     setBulkMCQMode(false)
   }
 
-  const addMultipleQuestions = (newQuestions) => {
+  // adminStart: explicit number from BulkMCQImport's customStart field (may be null)
+  const addMultipleQuestions = (newQuestions, adminStart = null) => {
     setSections(prev => {
       const arr = [...prev[currentKey.mod]]
-      const startFrom = getSectionStart(arr, currentKey.idx)
-      const combined = [...arr[currentKey.idx].questions, ...newQuestions]
+      const existing = arr[currentKey.idx].questions
+
+      // Compute next number after existing questions in THIS section
+      let lastUsed = getSectionStart(arr, currentKey.idx) - 1
+      existing.forEach(q => {
+        const s = q.startNumber || q.questionNumber || 1
+        lastUsed = Math.max(lastUsed, s + getQCountFromQ(q) - 1)
+      })
+      // Admin override takes priority; otherwise continue from last used
+      const startFrom = adminStart !== null ? adminStart : lastUsed + 1
+
+      // Renumber only the incoming questions — do NOT touch existing ones
+      const renumbered = reindexQuestions(newQuestions, startFrom)
+
       arr[currentKey.idx] = {
         ...arr[currentKey.idx],
-        questions: reindexQuestions(combined, startFrom),
+        questions: [...existing, ...renumbered],
       }
       return { ...prev, [currentKey.mod]: arr }
     })
@@ -2256,7 +2269,7 @@ function BulkMCQImport({ getNextStart, defaultInstruction, onImport, onCancel })
 
   const handleImport = () => {
     if (!parsed || parsed.length === 0) return
-    onImport(parsed.map(q => ({ ...q, instructionText })))
+    onImport(parsed.map(q => ({ ...q, instructionText })), customStart)
   }
 
   const EXAMPLE = `What is the main topic of the talk?
