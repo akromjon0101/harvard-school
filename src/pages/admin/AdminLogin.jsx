@@ -18,6 +18,7 @@ export default function AdminLogin() {
             const res = await fetch(`${BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ email, password })
             });
 
@@ -29,7 +30,6 @@ export default function AdminLogin() {
                 throw new Error('Access denied. Admin privileges required.');
             }
 
-            localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             navigate('/admin');
         } catch (err) {

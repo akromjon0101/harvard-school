@@ -19,20 +19,19 @@ if (typeof window !== 'undefined') {
 
 export const api = async (endpoint, method = 'GET', body) => {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    method, 
+    method,
+    credentials: 'include', // Important: allow browser to send/receive cookies
     headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+      'Content-Type': 'application/json'
     },
     body: body ? JSON.stringify(body) : null
   })
 
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) {
-      if (!endpoint.includes('login')) {
+      if (!endpoint.includes('login') && !endpoint.includes('logout')) {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         alert('⚠️ Session expired. Please log in again.');
-        localStorage.removeItem('token');
         localStorage.removeItem('user');
 
         if (user.role === 'admin') {

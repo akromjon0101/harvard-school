@@ -70,10 +70,32 @@ export const getExams = async (req, res) => {
     }
 };
 
+const stripAnswers = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(stripAnswers);
+    
+    const newObj = { ...obj };
+    delete newObj.correctAnswer;
+    delete newObj.correctAnswers;
+    
+    // Recursively handle nested objects/arrays
+    for (const key in newObj) {
+        newObj[key] = stripAnswers(newObj[key]);
+    }
+    return newObj;
+};
+
 export const getExamById = async (req, res) => {
     try {
         const exam = await Exam.findById(req.params.id).lean();
         if (!exam) return res.status(404).json({ error: 'Exam not found' });
+        
+        // Block answers for non-admins
+        if (!req.user || req.user.role !== 'admin') {
+            const filteredExam = stripAnswers(exam);
+            return res.json(filteredExam);
+        }
+        
         res.json(exam);
     } catch (err) {
         res.status(500).json({ error: err.message });

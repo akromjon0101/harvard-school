@@ -316,7 +316,14 @@ export const updateSubmission = async (req, res) => {
 
 export const getUserSubmissions = async (req, res) => {
     try {
-        const submissions = await Submission.find({ user: req.params.userId })
+        const userId = req.params.userId;
+        
+        // IDOR Protection: Only the user themselves or an admin can see their submission list
+        if (req.user.role !== 'admin' && req.user._id.toString() !== userId) {
+            return res.status(403).json({ error: 'Access denied. You can only view your own records.' });
+        }
+
+        const submissions = await Submission.find({ user: userId })
             .select('-answers -writingTexts -writingImages -speakingTexts -speakingAudioUrl -speakingParts -aiGrading')
             .populate('exam', 'title testLevel')
             .sort({ submittedAt: -1 })
@@ -356,6 +363,15 @@ export const getSubmissionById = async (req, res) => {
             .populate('exam')
             .populate('user', 'name email');
         if (!submission) return res.status(404).json({ error: 'Submission not found' });
+        
+        // IDOR Protection: Only the owner or an admin can view the submission details
+        const isOwner = req.user._id.toString() === submission.user?._id.toString() || 
+                        req.user._id.toString() === submission.user.toString();
+        
+        if (req.user.role !== 'admin' && !isOwner) {
+            return res.status(403).json({ error: 'Access denied. Unauthorized to view this submission.' });
+        }
+
         res.json(submission);
     } catch (error) {
         res.status(500).json({ error: error.message });

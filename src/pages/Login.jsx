@@ -18,6 +18,7 @@ export default function Login() {
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       })
 
@@ -25,7 +26,6 @@ export default function Login() {
 
       if (!res.ok) throw new Error(data.error || 'Login failed')
 
-      localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
 
       if (data.user.role === 'admin') {

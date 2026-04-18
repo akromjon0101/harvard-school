@@ -7,9 +7,15 @@ dotenv.config();
 
 export const auth = async (req, res, next) => {
     let token;
+    
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    }
+
+    if (token) {
         try {
-            token = req.headers.authorization.split(' ')[1];
 
             // No fallback - fail fast if JWT_SECRET is missing
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -38,9 +44,15 @@ export const auth = async (req, res, next) => {
 
 export const adminAuth = async (req, res, next) => {
     let token;
+    
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    }
+
+    if (token) {
         try {
-            token = req.headers.authorization.split(' ')[1];
 
             // No fallback - fail fast if JWT_SECRET is missing
             const decoded = jwt.verify(token, process.env.JWT_SECRET);

@@ -11,6 +11,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/authRoutes.js';
 import examRoutes from './routes/examRoutes.js';
@@ -54,6 +55,15 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Global Rate Limiting - apply to all API routes to prevent abuse
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // Limit each IP to 100 requests per minute
+  message: { error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // CORS Configuration - Allow all localhost ports in development
 const corsOptions = {
   origin: (origin, callback) => {
@@ -92,6 +102,8 @@ const corsOptions = {
 };
 
 // Middleware
+app.use(cookieParser());
+app.use(globalLimiter); 
 app.use(compression());
 app.use(cors(corsOptions));
 app.use(bodyParser.json({ limit: '10mb' })); // Reduced from 50mb
