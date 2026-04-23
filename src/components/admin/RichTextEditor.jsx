@@ -1,14 +1,14 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 
-// Content-editable toolbar with Bold, Italic, and font-size controls.
-// Stores content as HTML so formatting persists.
+// Content-editable rich text editor with Bold, Italic, Underline and font-size controls.
+// Stores content as HTML so formatting persists across saves.
 export default function RichTextEditor({ value, onChange, placeholder, rows = 3, className = '' }) {
   const ref = useRef(null);
   const isFocusedRef = useRef(false);
   const lastValueRef = useRef(value);
-  const savedRangeRef = useRef(null);  // save selection before dropdown opens
+  const savedRangeRef = useRef(null);
 
-  // Sync external value -> DOM (only when not focused to avoid cursor jump)
+  // Sync external value → DOM (only when not focused, to avoid cursor jumping)
   useEffect(() => {
     if (ref.current && !isFocusedRef.current && value !== lastValueRef.current) {
       ref.current.innerHTML = value || '';
@@ -16,12 +16,11 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
     }
   }, [value]);
 
-  // Initialize on mount
+  // Set initial content on mount
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = value || '';
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Save current selection range so we can restore it after clicking toolbar controls
   const saveSelection = () => {
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
@@ -29,7 +28,6 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
     }
   };
 
-  // Restore saved selection back into the contenteditable
   const restoreSelection = () => {
     if (!savedRangeRef.current) return;
     ref.current?.focus();
@@ -62,25 +60,86 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
   return (
     <div className={`rte-wrapper ${className}`}>
       <div className="rte-toolbar" onMouseDown={e => { e.preventDefault(); saveSelection(); }}>
+        {/* Bold */}
         <button type="button" className="rte-btn rte-bold" onClick={() => exec('bold')} title="Bold (Ctrl+B)">
           <b>B</b>
         </button>
+        {/* Italic */}
         <button type="button" className="rte-btn rte-italic" onClick={() => exec('italic')} title="Italic (Ctrl+I)">
           <i>I</i>
         </button>
+        {/* Underline */}
+        <button type="button" className="rte-btn" onClick={() => exec('underline')} title="Underline (Ctrl+U)">
+          <u>U</u>
+        </button>
+
         <div className="rte-divider" />
-        <select className="rte-size-sel" onMouseDown={saveSelection} onChange={handleFontSize} defaultValue="">
+
+        {/* Font size dropdown */}
+        <select
+          className="rte-size-sel"
+          onMouseDown={saveSelection}
+          onChange={handleFontSize}
+          defaultValue=""
+          title="Font size"
+        >
           <option value="" disabled>Size</option>
+          <option value="1">XS</option>
           <option value="2">Small</option>
           <option value="3">Normal</option>
+          <option value="4">Medium</option>
           <option value="5">Large</option>
-          <option value="6">X-Large</option>
+          <option value="6">XL</option>
+          <option value="7">XXL</option>
         </select>
+
         <div className="rte-divider" />
-        <button type="button" className="rte-btn rte-clear" onClick={() => { exec('removeFormat'); exec('unlink') }} title="Remove formatting">
-          ✕ Clear
+
+        {/* Quick font-size increase/decrease */}
+        <button
+          type="button"
+          className="rte-btn"
+          title="Increase font size"
+          onClick={() => {
+            restoreSelection();
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const el = sel.getRangeAt(0).startContainer.parentElement;
+              const curSize = parseInt(el?.dataset?.fontSize || el?.style?.fontSize || '3');
+              const next = Math.min(7, (curSize || 3) + 1);
+              exec('fontSize', String(next));
+            }
+          }}
+        >A+</button>
+        <button
+          type="button"
+          className="rte-btn"
+          title="Decrease font size"
+          onClick={() => {
+            restoreSelection();
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const el = sel.getRangeAt(0).startContainer.parentElement;
+              const curSize = parseInt(el?.dataset?.fontSize || el?.style?.fontSize || '3');
+              const prev = Math.max(1, (curSize || 3) - 1);
+              exec('fontSize', String(prev));
+            }
+          }}
+        >A-</button>
+
+        <div className="rte-divider" />
+
+        {/* Clear all formatting */}
+        <button
+          type="button"
+          className="rte-btn rte-clear"
+          onClick={() => { exec('removeFormat'); exec('unlink'); }}
+          title="Remove formatting"
+        >
+          ✕
         </button>
       </div>
+
       <div
         ref={ref}
         className="rte-content"

@@ -7,7 +7,6 @@ import { stripHtml } from '../utils/highlightUtils'
 import { applyHighlightsToContainer, clearHighlightsFromContainer } from '../utils/safeHighlight'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
-import '../styles/text-size.css'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
 
@@ -137,8 +136,6 @@ export default function IELTSExamPage() {
     const moduleTimerRef = useRef(null) // tracks which module's timer is currently running
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
-    // Text size control for students
-    const [textSize, setTextSize] = useState('normal')
 
     // Highlight state (reading + listening passages + question area)
     const [sectionHighlights, setSectionHighlights] = useState({})
@@ -665,7 +662,7 @@ export default function IELTSExamPage() {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className={`ip-root text-size-${textSize}`}>
+        <div className="ip-root">
 
             {/* ── COMBINED HEADER ── */}
             <header className="ip-header">
@@ -715,30 +712,6 @@ export default function IELTSExamPage() {
                     </div>
                 )}
 
-                {/* Text size selector */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginLeft: 'auto', paddingRight: '12px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b' }}>A</span>
-                    {['small', 'normal', 'large'].map(size => (
-                        <button
-                            key={size}
-                            onClick={() => setTextSize(size)}
-                            style={{
-                                padding: '4px 10px',
-                                borderRadius: '4px',
-                                border: `1.5px solid ${textSize === size ? '#3b82f6' : '#e2e8f0'}`,
-                                background: textSize === size ? '#dbeafe' : '#f8fafc',
-                                color: textSize === size ? '#1e40af' : '#64748b',
-                                fontWeight: textSize === size ? '600' : '500',
-                                fontSize: size === 'small' ? '11px' : size === 'large' ? '14px' : '12px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            title={`${size.charAt(0).toUpperCase() + size.slice(1)} text`}
-                        >
-                            A
-                        </button>
-                    ))}
-                </div>
             </header>
 
             {/* ── INSTRUCTIONS BANNER (reading / speaking only — listening shows inline) ── */}

@@ -1,13 +1,61 @@
-// Advanced utilities for highlighting DOM nodes accurately without breaking HTML
+// safeHighlight.js — Professional DOM-based text highlighting utilities
 
+/**
+ * Unwrap all <mark.ip-text-highlight> elements inside a container
+ * and normalize adjacent text nodes so offsets stay consistent.
+ */
+export function clearHighlightsFromContainer(container) {
+    if (!container) return;
+    // Collect first to avoid live-NodeList mutation while iterating
+    const marks = [...container.querySelectorAll('mark.ip-text-highlight')];
+    marks.forEach(mark => {
+        const parent = mark.parentNode;
+        if (!parent) return;
+        // Move all children out before the mark
+        while (mark.firstChild) {
+            parent.insertBefore(mark.firstChild, mark);
+        }
+        parent.removeChild(mark);
+    });
+    // One single normalize pass at the root is enough and fastest
+    container.normalize();
+}
+
+/**
+ * Walk TEXT_NODEs inside `container` and find the node + local offset
+ * that corresponds to `targetOffset` characters from the start.
+ */
+function findNodeAndOffset(container, targetOffset) {
+    let accumulated = 0;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+    let node = walker.nextNode();
+    while (node) {
+        const len = node.nodeValue.length;
+        // Use strict > so that the END of a node maps to the START of the next
+        if (accumulated + len > targetOffset) {
+            return { node, offset: targetOffset - accumulated };
+        }
+        accumulated += len;
+        node = walker.nextNode();
+    }
+    // Fallback: clamp to last text node end
+    if (node) return { node, offset: node.nodeValue.length };
+    return null;
+}
+
+/**
+ * Wrap every TEXT_NODE within `range` in a <mark> element.
+ * Works safely across element boundaries.
+ */
 export function wrapRangeTextNodes(range, colorClass = 'ip-hl-yellow', dataHlId = '', onClickHighlight = null) {
-    // Collect all text nodes within the range
+    // Gather affected text nodes
     const textNodes = [];
-    let node = range.startContainer;
-    const endNode = range.endContainer;
 
-    if (node === endNode && node.nodeType === Node.TEXT_NODE) {
-        textNodes.push(node);
+    if (
+        range.startContainer === range.endContainer &&
+        range.startContainer.nodeType === Node.TEXT_NODE
+    ) {
+        textNodes.push(range.startContainer);
     } else {
         const walker = document.createTreeWalker(
             range.commonAncestorContainer,
@@ -15,115 +63,75 @@ export function wrapRangeTextNodes(range, colorClass = 'ip-hl-yellow', dataHlId 
             null,
             false
         );
-        
-        let currentNode = walker.currentNode;
-        while (currentNode && currentNode !== node) {
-            currentNode = walker.nextNode();
-        }
-        
-        while (currentNode) {
-            textNodes.push(currentNode);
-            if (currentNode === endNode) break;
-            currentNode = walker.nextNode();
+        let n = walker.nextNode();
+        while (n) {
+            if (range.intersectsNode(n)) textNodes.push(n);
+            n = walker.nextNode();
         }
     }
 
-    // Process nodes to wrap them in <mark>
     textNodes.forEach(textNode => {
-        let start = 0;
-        let end = textNode.nodeValue.length;
+        let startOff = 0;
+        let endOff = textNode.nodeValue.length;
 
-        if (textNode === range.startContainer) {
-            start = range.startOffset;
-        }
-        if (textNode === range.endContainer) {
-            end = range.endOffset;
-        }
+        if (textNode === range.startContainer) startOff = range.startOffset;
+        if (textNode === range.endContainer)   endOff   = range.endOffset;
+        if (startOff >= endOff) return; // nothing to highlight on this node
 
-        if (start === end) return; // Empty range on this node
+        const full   = textNode.nodeValue;
+        const before = full.substring(0, startOff);
+        const middle = full.substring(startOff, endOff);
+        const after  = full.substring(endOff);
 
-        const text = textNode.nodeValue;
-        const middle = text.substring(start, end);
-        const after = text.substring(end);
+        // Shorten current node to the "before" part
+        textNode.nodeValue = before;
 
-        // Modify the current text node to contain only the text *before* the highlight
-        textNode.nodeValue = text.substring(0, start);
-
-        // Create the highlighted span
+        // Create the highlight mark
         const mark = document.createElement('mark');
-        mark.className = `ip-text-highlight ${colorClass}`;
-        if (dataHlId !== undefined) mark.setAttribute('data-hl', dataHlId);
-        mark.textContent = middle;
-        mark.style.cursor = 'pointer';
-        mark.title = 'Click to remove highlight';
-        
+        mark.className        = `ip-text-highlight ${colorClass}`;
+        mark.dataset.hl       = String(dataHlId);
+        mark.textContent      = middle;
+        mark.style.cursor     = 'pointer';
+        mark.title            = 'Click to remove';
         if (onClickHighlight) mark.onclick = onClickHighlight;
 
-        // Insert mark after the text node
-        if (textNode.parentNode) {
-            textNode.parentNode.insertBefore(mark, textNode.nextSibling);
-            // Insert remaining text as a new node after the mark
-            if (after.length > 0) {
-                const afterNode = document.createTextNode(after);
-                textNode.parentNode.insertBefore(afterNode, mark.nextSibling);
-            }
+        const parent = textNode.parentNode;
+        parent.insertBefore(mark, textNode.nextSibling);
+
+        if (after.length > 0) {
+            parent.insertBefore(document.createTextNode(after), mark.nextSibling);
         }
     });
 
     return true;
 }
 
-export function clearHighlightsFromContainer(container) {
-    if (!container) return;
-    const marks = container.querySelectorAll('mark.ip-text-highlight');
-    marks.forEach(mark => {
-        const parent = mark.parentNode;
-        if (!parent) return;
-        while (mark.firstChild) {
-            parent.insertBefore(mark.firstChild, mark);
-        }
-        parent.removeChild(mark);
-        // Normalize text nodes so sequential offset counts are perfect
-        parent.normalize(); 
-    });
-}
-
-// Applies an array of highlight ranges {start, end, color, id} to a root container.
+/**
+ * Apply an array of { start, end, color } highlight descriptors to `container`.
+ * Must be called AFTER clearHighlightsFromContainer so offsets match raw text.
+ */
 export function applyHighlightsToContainer(container, highlights) {
-    if (!container || !highlights || !highlights.length) return;
+    if (!container || !highlights?.length) return;
 
-    // Helper to find node and offset in terms of TEXT_NODE length
-    function findNodeAndOffset(targetOffset) {
-        let total = 0;
-        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-        let node = walker.nextNode();
-        while (node) {
-            const len = node.nodeValue.length;
-            if (total + len >= targetOffset) {
-                return { node, offset: targetOffset - total };
-            }
-            total += len;
-            node = walker.nextNode();
-        }
-        return null;
-    }
-
-    // Sort highlights to apply from end-to-back ?? 
-    // Wait, applying from back to front prevents messing up previous offsets!
-    const sorted = [...highlights].sort((a, b) => b.start - a.start);
+    // Apply front-to-back. After each highlight we re-walk (safe because we
+    // normalized first), so there is no offset-drift between highlights.
+    const sorted = [...highlights].sort((a, b) => a.start - b.start);
 
     sorted.forEach((hl, idx) => {
-        const originalId = hl.origIdx !== undefined ? hl.origIdx : idx;
         const colorClass = hl.color ? `ip-hl-${hl.color}` : 'ip-hl-yellow';
+        const startObj = findNodeAndOffset(container, hl.start);
+        const endObj   = findNodeAndOffset(container, hl.end);
+        if (!startObj || !endObj) return;
 
-        const startObj = findNodeAndOffset(hl.start);
-        const endObj = findNodeAndOffset(hl.end);
-
-        if (startObj && endObj) {
-            const range = document.createRange();
+        const range = document.createRange();
+        try {
             range.setStart(startObj.node, startObj.offset);
             range.setEnd(endObj.node, endObj.offset);
-            wrapRangeTextNodes(range, colorClass, originalId);
+            if (!range.collapsed) {
+                wrapRangeTextNodes(range, colorClass, hl.origIdx ?? idx);
+            }
+        } catch {
+            // Skip any range that the browser rejects (e.g. stale nodes)
         }
     });
 }
