@@ -27,7 +27,7 @@ function normalizeModules(modules) {
 
 export const createExam = async (req, res) => {
     try {
-        const { title, description, testLevel, modules, defaultTextSize, aiGradingEnabled, status } = req.body;
+        const { title, description, testLevel, modules, aiGradingEnabled, status } = req.body;
 
         // basic server-side validation
         if (!title) {
@@ -47,8 +47,7 @@ export const createExam = async (req, res) => {
             testLevel,
             modules: normalizedModules,
             status: status || 'draft',
-            aiGradingEnabled: aiGradingEnabled || false,
-            defaultTextSize: defaultTextSize || 'normal'
+            aiGradingEnabled: aiGradingEnabled || false
         });
 
         const savedExam = await newExam.save();

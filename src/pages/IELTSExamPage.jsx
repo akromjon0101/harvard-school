@@ -204,8 +204,6 @@ export default function IELTSExamPage() {
             .then(data => {
                 if (data) {
                     setExam(data)
-                    // Set default text size from exam
-                    setTextSize(data.defaultTextSize || 'normal')
                 }
             })
             .catch(() => navigate('/dashboard'))

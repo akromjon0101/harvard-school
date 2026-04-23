@@ -228,9 +228,6 @@ export default function TestCreator() {
   // ── AI grading
   const [aiGradingEnabled, setAiGradingEnabled] = useState(false)
 
-  // ── Text size for exam
-  const [defaultTextSize, setDefaultTextSize] = useState('normal')
-
   // ── Publish/save state
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState([])
@@ -248,7 +245,6 @@ export default function TestCreator() {
         setTitle(exam.title || '')
         setDescription(exam.description || '')
         setAiGradingEnabled(!!exam.aiGradingEnabled)
-        setDefaultTextSize(exam.defaultTextSize || 'normal')
         const mods = exam.modules || {}
         const detected = ['listening', 'reading', 'writing', 'speaking'].filter(m => Array.isArray(mods[m]) && mods[m].length > 0)
         setActiveModules(detected.length > 0 ? detected : ['listening', 'reading'])
@@ -574,9 +570,7 @@ export default function TestCreator() {
         writing: (sections.writing || []).map(normalizeSection),
         speaking: (sections.speaking || []).map(normalizeSpeakingSection),
       }
-      const endpoint = isEditMode ? `/exams/${examId}` : '/exams'
-      const method = isEditMode ? 'PUT' : 'POST'
-      await api(endpoint, method, { title, description, status: saveStatus, modules, aiGradingEnabled, defaultTextSize })
+      await api(endpoint, method, { title, description, status: saveStatus, modules, aiGradingEnabled })
       navigate('/admin/exams')
     } catch (err) {
       setSaveError('Save failed: ' + err.message)
@@ -698,27 +692,6 @@ export default function TestCreator() {
               </button>
             </div>
 
-            <div className="tc-ai-toggle-field">
-              <div className="tc-ai-toggle-info">
-                <span className="tc-ai-toggle-icon">🔤</span>
-                <div>
-                  <strong>Default Text Size</strong>
-                  <p>Set the default font size for all students. Students can adjust their own text size while taking the test. This is the starting size they'll see.</p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[
-                  { value: 'small', label: 'Small', icon: 'A' },
-                  { value: 'normal', label: 'Normal', icon: 'A' },
-                  { value: 'large', label: 'Large', icon: 'A' }
-                ].map(size => (
-                  <label key={size.value} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '8px 14px', borderRadius: '6px', border: `2px solid ${defaultTextSize === size.value ? '#3b82f6' : '#e2e8f0'}`, background: defaultTextSize === size.value ? '#dbeafe' : '#f8fafc', fontWeight: defaultTextSize === size.value ? 600 : 500, color: defaultTextSize === size.value ? '#1e40af' : '#64748b', transition: 'all 0.2s' }}>
-                    <input type="radio" name="textSize" value={size.value} checked={defaultTextSize === size.value} onChange={(e) => setDefaultTextSize(e.target.value)} style={{ cursor: 'pointer' }} />
-                    <span style={{ fontSize: size.value === 'small' ? '12px' : size.value === 'large' ? '16px' : '14px' }}>{size.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
 
             <div className="tc-footer">
               <div />

@@ -33,7 +33,7 @@ const examSchema = new mongoose.Schema({
     description: String,
     status: { type: String, enum: ['draft', 'published'], default: 'draft' },
     aiGradingEnabled: { type: Boolean, default: false },
-    defaultTextSize: { type: String, enum: ['small', 'normal', 'large'], default: 'normal' },
+
     modules: {
         listening: [sectionSchema],
         reading: [sectionSchema],
