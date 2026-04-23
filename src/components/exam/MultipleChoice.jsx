@@ -10,7 +10,7 @@ const MultipleChoice = ({ data = {}, value, onChange, qNumber }) => {
             <div className="ielts-question-item">
                 <div className="q-num-text-flex">
                     <span className="q-num-square">{qNumber}</span>
-                    <p className="q-text-bold">{questionText}</p>
+                    <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
                 </div>
                 <div className="ielts-options-grid">
                     {visibleOptions.map((opt, idx) => {

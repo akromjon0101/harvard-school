@@ -1378,12 +1378,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
         <>
           <div className="tc-field">
             <label className="tc-label">Question Text</label>
-            <textarea
-              className="tc-textarea"
-              rows={3}
+            <RichTextEditor
               value={q.questionText || ''}
-              onChange={e => update('questionText', e.target.value)}
+              onChange={val => update('questionText', val)}
               placeholder="e.g. What is the main reason the speaker gives for the change in policy?"
+              rows={2}
             />
           </div>
           <div className="tc-field">
@@ -1443,12 +1442,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
         <>
           <div className="tc-field">
             <label className="tc-label">Question Text</label>
-            <textarea
-              className="tc-textarea"
-              rows={3}
+            <RichTextEditor
               value={q.questionText || ''}
-              onChange={e => update('questionText', e.target.value)}
+              onChange={val => update('questionText', val)}
               placeholder="e.g. Which TWO things did Colin find most satisfying about his project?"
+              rows={2}
             />
           </div>
           <div className="tc-field">

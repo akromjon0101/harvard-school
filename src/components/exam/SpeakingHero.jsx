@@ -150,6 +150,8 @@ export default function SpeakingHero({
     const [prepPhase,       setPrepPhase]       = useState('none')  // 'none'|'prep'|'ready'
     const [prepCountdown,   setPrepCountdown]   = useState(PREP_SECONDS)
     const [speakCountdown,  setSpeakCountdown]  = useState(SPEAK_SECONDS)
+    // Note card (Part 2 preparation notes)
+    const [notes, setNotes] = useState('')
 
     const ttsAudioRef    = useRef(new Audio())
     const timerRef       = useRef(null)
@@ -177,6 +179,7 @@ export default function SpeakingHero({
         setQAudios({}); setQDurations({}); setTtsState('idle')
         setRecordCountdown(MAX_RECORD_SECONDS)
         setPrepPhase('none'); setPrepCountdown(PREP_SECONDS); setSpeakCountdown(SPEAK_SECONDS)
+        setNotes('')
         clearInterval(countdownRef.current)
         const audio = ttsAudioRef.current
         if (audio) { audio.pause(); audio.src = ''; audio.onended = null; audio.onerror = null }
@@ -558,6 +561,29 @@ export default function SpeakingHero({
                             Topic Card — Read and make notes
                         </div>
                         <div className="sh-cuecard-body">{section.passageContent}</div>
+                    </div>
+                )}
+
+                {/* Note card — visible during prep + speaking phases */}
+                {(prepPhase === 'prep' || prepPhase === 'ready' || speakingRecording) && (
+                    <div className="sh-notecard">
+                        <div className="sh-notecard-label">📝 My Notes</div>
+                        <textarea
+                            className="sh-notecard-textarea"
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                            placeholder={
+                                prepPhase === 'prep'
+                                    ? 'Write your key points and ideas here during preparation...'
+                                    : 'Refer to your notes while speaking...'
+                            }
+                            readOnly={!!blobUrl && !speakingRecording}
+                        />
+                        {prepPhase === 'prep' && (
+                            <p className="sh-notecard-hint">
+                                Use this space to jot down bullet points. You can read these while speaking.
+                            </p>
+                        )}
                     </div>
                 )}
 

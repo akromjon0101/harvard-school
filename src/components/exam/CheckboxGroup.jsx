@@ -19,7 +19,7 @@ const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber }) => {
             <div className="ielts-question-item">
                 <div className="q-num-text-flex">
                     <span className="q-num-square q-num-wide">{qLabel}</span>
-                    <p className="q-text-bold">{questionText}</p>
+                    <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
                 </div>
                 <div className="ielts-options-grid">
                     {options.map((opt, idx) => {
