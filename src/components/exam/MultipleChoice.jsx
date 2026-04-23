@@ -24,7 +24,7 @@ const MultipleChoice = ({ data = {}, value, onChange, qNumber, hideQuestionText 
                                 onClick={() => onChange(letter)}
                             >
                                 <span className="opt-circle">{letter}</span>
-                                <span className="opt-label-text">{opt}</span>
+                                <span className="opt-label-text" dangerouslySetInnerHTML={{ __html: opt }} />
                             </div>
                         );
                     })}

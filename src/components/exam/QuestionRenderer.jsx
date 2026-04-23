@@ -9,12 +9,9 @@ import SummaryPhraseBank from './SummaryPhraseBank';
 import MatchingHeadings from './MatchingHeadings';
 import ChooseFromBox from './ChooseFromBox';
 import TrueFalseNotGiven from './TrueFalseNotGiven';
-import { renderHighlightedText, stripHtml } from '../../utils/highlightUtils';
 
 const QuestionRenderer = ({
     type, data, value, onChange, qNumber, hideInstruction,
-    // Highlight props for instruction text
-    instrHighlights, instrRef, onInstrMouseUp, onInstrClick,
 }) => {
 
     // Shared formatting for MCQ/Matching
@@ -142,44 +139,23 @@ const QuestionRenderer = ({
         }
     };
 
-    // Types whose questionText should be included in the highlightable text zone
+    // Types whose questionText should be included in the text zone
     // (avoids double-rendering: shown here + hidden inside the component)
     const QTEXT_IN_ZONE = ['mcq', 'mcq-single', 'mcq-multi', 'mcq-multiple', 'checkbox', 'tfng', 'true-false-notgiven']
     const showQTextInZone = QTEXT_IN_ZONE.includes(type) && !!data.questionText
 
-    // Render combined instruction + question text as ONE highlightable zone
+    // Render instruction + question text as highlightable zone
     const renderTextZone = () => {
         const showInstr = !hideInstruction && !!data.instructionText
         if (!showInstr && !showQTextInZone) return null
 
-        const hasHighlights = instrHighlights?.length > 0
-
-        if (hasHighlights) {
-            // Render plain text with highlight marks; HTML formatting temporarily lost (trade-off)
-            const instrPlain = showInstr ? stripHtml(data.instructionText) : ''
-            const qPlain     = showQTextInZone ? stripHtml(data.questionText) : ''
-            const combined   = instrPlain + qPlain  // no separator — matches DOM textContent
-            return (
-                <div className="ip-text-zone ip-highlightable" onMouseUp={onInstrMouseUp} onClick={onInstrClick}>
-                    {renderHighlightedText(combined, instrHighlights)}
-                </div>
-            )
-        }
-
-        // No highlights: render HTML-aware content
-        const instrHtml = showInstr && /<[^>]+>/.test(data.instructionText)
-        const qHtml     = showQTextInZone && /<[^>]+>/.test(data.questionText)
         return (
-            <div className="ip-text-zone ip-highlightable" onMouseUp={onInstrMouseUp} onClick={onInstrClick}>
+            <div className="ip-text-zone ip-highlightable">
                 {showInstr && (
-                    instrHtml
-                        ? <div className="ip-content-instructions" dangerouslySetInnerHTML={{ __html: data.instructionText }} />
-                        : <div className="ip-content-instructions">{data.instructionText}</div>
+                    <div className="ip-content-instructions" dangerouslySetInnerHTML={{ __html: data.instructionText }} />
                 )}
                 {showQTextInZone && (
-                    qHtml
-                        ? <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: data.questionText }} />
-                        : <p className="q-text-bold">{data.questionText}</p>
+                     <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: data.questionText }} />
                 )}
             </div>
         )

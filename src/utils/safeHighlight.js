@@ -73,6 +73,21 @@ export function wrapRangeTextNodes(range, colorClass = 'ip-hl-yellow', dataHlId 
     return true;
 }
 
+export function clearHighlightsFromContainer(container) {
+    if (!container) return;
+    const marks = container.querySelectorAll('mark.ip-text-highlight');
+    marks.forEach(mark => {
+        const parent = mark.parentNode;
+        if (!parent) return;
+        while (mark.firstChild) {
+            parent.insertBefore(mark.firstChild, mark);
+        }
+        parent.removeChild(mark);
+        // Normalize text nodes so sequential offset counts are perfect
+        parent.normalize(); 
+    });
+}
+
 // Applies an array of highlight ranges {start, end, color, id} to a root container.
 export function applyHighlightsToContainer(container, highlights) {
     if (!container || !highlights || !highlights.length) return;

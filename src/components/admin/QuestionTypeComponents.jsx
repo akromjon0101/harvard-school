@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ImageUploader from './ImageUploader'
+import RichTextEditor from './RichTextEditor'
 
 // 1. Multiple Choice - Single Answer
 export function MultipleChoiceSingle({ question, onChange }) {
@@ -31,11 +32,12 @@ export function MultipleChoiceSingle({ question, onChange }) {
                 <label>Options:</label>
                 {options.map((opt, idx) => (
                     <div key={idx} className="option-row">
-                        <input
-                            type="text"
-                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                        <RichTextEditor
+                            className="opt-rte"
                             value={opt}
-                            onChange={(e) => updateOption(idx, e.target.value)}
+                            onChange={(val) => updateOption(idx, val)}
+                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                            rows={1}
                         />
                         {options.length > 2 && (
                             <button onClick={() => removeOption(idx)} className="btn-remove">✕</button>
@@ -111,11 +113,12 @@ export function MultipleChoiceMultiple({ question, onChange }) {
                 <label>Options:</label>
                 {options.map((opt, idx) => (
                     <div key={idx} className="option-row">
-                        <input
-                            type="text"
-                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                        <RichTextEditor
+                            className="opt-rte"
                             value={opt}
-                            onChange={(e) => updateOption(idx, e.target.value)}
+                            onChange={(val) => updateOption(idx, val)}
+                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                            rows={1}
                         />
                     </div>
                 ))}
@@ -171,26 +174,30 @@ export function MatchingForm({ question, onChange }) {
             <div className="form-group">
                 <label>Items to Match:</label>
                 {items.map((item, idx) => (
-                    <input
-                        key={idx}
-                        type="text"
-                        placeholder={`Item ${idx + 1}`}
-                        value={item}
-                        onChange={(e) => updateItem(idx, e.target.value)}
-                    />
+                    <div key={idx} className="option-row" style={{marginBottom: 8}}>
+                        <RichTextEditor
+                            className="opt-rte"
+                            value={item}
+                            onChange={(val) => updateItem(idx, val)}
+                            placeholder={`Item ${idx + 1}`}
+                            rows={1}
+                        />
+                    </div>
                 ))}
             </div>
 
             <div className="form-group">
                 <label>Match Options:</label>
                 {matchOptions.map((opt, idx) => (
-                    <input
-                        key={idx}
-                        type="text"
-                        placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                        value={opt}
-                        onChange={(e) => updateMatchOption(idx, e.target.value)}
-                    />
+                    <div key={idx} className="option-row" style={{marginBottom: 8}}>
+                        <RichTextEditor
+                            className="opt-rte"
+                            value={opt}
+                            onChange={(val) => updateMatchOption(idx, val)}
+                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                            rows={1}
+                        />
+                    </div>
                 ))}
             </div>
 

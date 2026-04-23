@@ -212,11 +212,11 @@ const QuestionForm = ({ question, onChange, activeModule }) => {
                     {question.options?.map((opt, i) => (
                         <div key={i} className="variant-row-modern">
                             <span className="variant-letter">{String.fromCharCode(65 + i)}</span>
-                            <input
-                                type="text"
+                            <RichTextEditor
                                 value={opt}
-                                onChange={(e) => handleOptionChange(i, e.target.value)}
+                                onChange={(val) => handleOptionChange(i, val)}
                                 placeholder="Choice text..."
+                                rows={1}
                             />
                             <button className="btn-remove-choice" onClick={() => removeOption(i)}>✕</button>
                         </div>

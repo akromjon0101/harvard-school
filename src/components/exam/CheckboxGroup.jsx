@@ -34,7 +34,7 @@ const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber, hideQue
                                 onClick={() => toggleOption(letter)}
                             >
                                 <span className="opt-circle opt-square">{letter}</span>
-                                <span className="opt-label-text">{opt}</span>
+                                <span className="opt-label-text" dangerouslySetInnerHTML={{ __html: opt }} />
                             </div>
                         );
                     })}

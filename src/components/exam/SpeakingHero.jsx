@@ -110,6 +110,7 @@ export default function SpeakingHero({
     isAdmin,
     textValue,
     onTextAnswer,
+    sessionElapsed = 0,
 }) {
     const rawQuestions = section?.questions || []
     const questions = rawQuestions.length > 0
@@ -537,6 +538,11 @@ export default function SpeakingHero({
         return (
             <div className="sh-root sh-root--p2">
                 {isAdmin && <div className="sh-admin-badge">Admin Preview Mode</div>}
+                
+                {/* ── Global Session Timer Badge ── */}
+                <div className="sh-global-timer">
+                    <Clock size={14} /> Total Time: {fmt(sessionElapsed)}
+                </div>
 
                 {/* ── Compact Part 2 header (replaces full AIHero for less scroll) ── */}
                 <div className="sh-p2-compact-header">
@@ -698,6 +704,11 @@ export default function SpeakingHero({
     return (
         <div className="sh-root">
             {isAdmin && <div className="sh-admin-badge">Admin Preview Mode</div>}
+            
+            {/* ── Global Session Timer Badge ── */}
+            <div className="sh-global-timer">
+                <Clock size={14} /> Total Time: {fmt(sessionElapsed)}
+            </div>
 
             <AIHero
                 isSpeakingTTS={isSpeakingTTS}
