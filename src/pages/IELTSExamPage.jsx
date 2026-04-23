@@ -817,14 +817,7 @@ export default function IELTSExamPage() {
                                                     className="ip-context-box ip-highlightable"
                                                     dangerouslySetInnerHTML={{ __html: section.passageContent || 'No content' }}
                                                 />
-                                                false && (
-                                                    <button
-                                                        className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                                        onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
-                                                    >
-                                                        🗑 Clear highlights
-                                                    </button>
-                                                )}
+
                                             </div>
                                             <div className="ip-listening-right">
                                                 {renderQuestions()}
@@ -842,14 +835,7 @@ export default function IELTSExamPage() {
                                                 dangerouslySetInnerHTML={{ __html: instrPlainText || 'No content' }}
                                             />
                                         )}
-                                        false && (
-                                            <button
-                                                className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                                onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
-                                            >
-                                                🗑 Clear highlights
-                                            </button>
-                                        )}
+
                                         {/* 2. Image after instructions */}
                                         {sectionImage && (
                                             <img
@@ -872,14 +858,7 @@ export default function IELTSExamPage() {
                             <div className="ip-passage-col">
                                 <div className="ip-passage-title-row">
                                     <h2 className="ip-passage-title">{section?.title}</h2>
-                                    false && (
-                                        <button
-                                            className="ip-hl-clear-btn"
-                                            onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
-                                        >
-                                            🗑 Clear
-                                        </button>
-                                    )}
+
                                 </div>
                                 <div
                                     className="ip-passage-text ip-highlightable"
@@ -943,14 +922,7 @@ export default function IELTSExamPage() {
                                     className="ip-task-prompt ip-highlightable"
                                     dangerouslySetInnerHTML={{ __html: section?.passageContent || 'No task description provided.' }}
                                 />
-                                false && (
-                                    <button
-                                        className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                        onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
-                                    >
-                                        🗑 Clear highlights
-                                    </button>
-                                )}
+
                             </div>
                             <WritingArea
                                 sectionIdx={sectionIdx}
