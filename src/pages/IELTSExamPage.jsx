@@ -4,7 +4,7 @@ import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
 import { stripHtml } from '../utils/highlightUtils'
-import { applyHighlightsToContainer, clearHighlightsFromContainer } from '../utils/safeHighlight'
+import { applyHighlightsToContainer, clearHighlightsFromContainer, wrapRangeTextNodes } from '../utils/safeHighlight'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 
@@ -137,9 +137,9 @@ export default function IELTSExamPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
-    // Highlight state (reading + listening passages + question area)
-    const [sectionHighlights, setSectionHighlights] = useState({})
-    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0, start: 0, end: 0, hlTarget: null })
+    // Highlight state
+    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0 })
+    const savedRangeRef = useRef(null) // stores the live browser Range until color is chosen
 
     // Speaking session elapsed timer
     const speakingSessionStartRef = useRef(null)
@@ -184,8 +184,8 @@ export default function IELTSExamPage() {
         setIsAudioPlaying(false)
         setAudioCheckConfirmed(false)
         setTestAudioPlayed(false)
-        setSectionHighlights({})
-        setSelectionPopup({ visible: false, x: 0, y: 0, start: 0, end: 0, hlTarget: null })
+        clearHighlightsFromContainer(examPaperRef.current)
+        setSelectionPopup({ visible: false, x: 0, y: 0 })
         setSessionElapsed(0)
         speakingSessionStartRef.current = null
         setShowSubmitConfirm(false)
@@ -540,79 +540,63 @@ export default function IELTSExamPage() {
         if (currentTime >= duration) setIsAudioPlaying(false)
     }
 
-    // ── Highlight helpers ─────────────────────────────────────────────────────
+    // ── Highlight helpers (direct DOM mutation — no offset tracking) ──────────
     const examPaperRef = useRef(null)
 
-    const highlightKey = `hl_${partIndex}`
-    const currentHighlights = sectionHighlights[highlightKey] || []
-
     const handleGlobalMouseUp = useCallback((e) => {
+        // Don't intercept clicks on existing highlights or interactive elements
         if (e.target.closest('mark.ip-text-highlight')) return
+        if (e.target.closest('input, textarea, button, select, [contenteditable]')) return
+
         const selection = window.getSelection()
-        if (!selection || selection.isCollapsed) { setSelectionPopup(p => ({ ...p, visible: false })); return }
-        const selectedText = selection.toString()
-        if (selectedText.trim().length < 2) { setSelectionPopup(p => ({ ...p, visible: false })); return }
+        if (!selection || selection.isCollapsed) {
+            setSelectionPopup(p => ({ ...p, visible: false }))
+            return
+        }
+        const text = selection.toString().trim()
+        if (text.length < 2) {
+            setSelectionPopup(p => ({ ...p, visible: false }))
+            return
+        }
         const range = selection.getRangeAt(0)
         const el = examPaperRef.current
-        if (!el || !el.contains(range.commonAncestorContainer)) { setSelectionPopup(p => ({ ...p, visible: false })); return }
-        
-        let total = 0;
-        let startMatch = -1;
-        let endMatch = -1;
-        
-        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
-        let node = walker.nextNode();
-        while (node) {
-            if (node === range.startContainer) {
-                startMatch = total + range.startOffset;
-            }
-            if (node === range.endContainer) {
-                endMatch = total + range.endOffset;
-            }
-            total += node.nodeValue.length;
-            if (startMatch !== -1 && endMatch !== -1) break;
-            node = walker.nextNode();
-        }
-        
-        if (startMatch !== -1 && endMatch !== -1 && endMatch > startMatch) {
-            const rect = range.getBoundingClientRect()
-            setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: Math.max(70, rect.top), start: startMatch, end: endMatch, hlTarget: null })
-        } else {
+        if (!el || !el.contains(range.commonAncestorContainer)) {
             setSelectionPopup(p => ({ ...p, visible: false }))
+            return
         }
+        // Save the exact browser Range — we'll wrap it when user picks a color
+        savedRangeRef.current = range.cloneRange()
+        const rect = range.getBoundingClientRect()
+        setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: Math.max(70, rect.top) })
     }, [])
 
     const applyHighlight = useCallback((color = 'yellow') => {
-        const { start, end } = selectionPopup
-        setSectionHighlights(prev => ({
-            ...prev,
-            [highlightKey]: [...(prev[highlightKey] || []), { start, end, color }]
-        }))
+        if (!savedRangeRef.current) return
+        const colorClass = `ip-hl-${color}`
+        const removeClickHandler = (e) => {
+            const mark = e.currentTarget
+            const parent = mark.parentNode
+            if (!parent) return
+            while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
+            parent.removeChild(mark)
+            parent.normalize()
+        }
+        wrapRangeTextNodes(savedRangeRef.current, colorClass, Date.now(), removeClickHandler)
+        savedRangeRef.current = null
         setSelectionPopup(p => ({ ...p, visible: false }))
         window.getSelection()?.removeAllRanges()
-    }, [selectionPopup, highlightKey])
+    }, [])
 
-    const handlePassageClick = useCallback((e) => {
+    // Click on existing mark → remove it
+    const handleMarkClick = useCallback((e) => {
         const mark = e.target.closest('mark.ip-text-highlight')
         if (!mark) return
-        const idx = parseInt(mark.dataset.hl, 10)
-        if (isNaN(idx)) return
-        setSectionHighlights(prev => ({
-            ...prev,
-            [highlightKey]: (prev[highlightKey] || []).filter((_, i) => i !== idx)
-        }))
-    }, [highlightKey])
-
-    useEffect(() => {
-        if (!examPaperRef.current) return;
-        clearHighlightsFromContainer(examPaperRef.current);
-        applyHighlightsToContainer(examPaperRef.current, currentHighlights);
-        const marks = examPaperRef.current.querySelectorAll('mark.ip-text-highlight');
-        marks.forEach(m => {
-            m.title = 'Click to remove';
-            m.onclick = handlePassageClick;
-        });
-    }, [currentHighlights, section, isReading, isListening, isWriting, handlePassageClick]);
+        const parent = mark.parentNode
+        if (!parent) return
+        while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
+        parent.removeChild(mark)
+        parent.normalize()
+    }, [])
 
     // ── Part label ────────────────────────────────────────────────────────────
     const getPartLabel = (mod, idx) => {
@@ -755,6 +739,7 @@ export default function IELTSExamPage() {
                 <div 
                     ref={examPaperRef}
                     onMouseUp={handleGlobalMouseUp}
+                    onClick={handleMarkClick}
                     className={[
                     'ip-paper',
                     isListening ? 'ip-paper-listening' : '',
@@ -834,12 +819,12 @@ export default function IELTSExamPage() {
                                                     className="ip-context-box ip-highlightable"
                                                     dangerouslySetInnerHTML={{ __html: section.passageContent || 'No content' }}
                                                 />
-                                                {currentHighlights.length > 0 && (
+                                                false && (
                                                     <button
                                                         className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                                        onClick={() => setSectionHighlights(prev => ({ ...prev, [highlightKey]: [] }))}
+                                                        onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
                                                     >
-                                                        🗑 Clear highlights ({currentHighlights.length})
+                                                        🗑 Clear highlights
                                                     </button>
                                                 )}
                                             </div>
@@ -859,12 +844,12 @@ export default function IELTSExamPage() {
                                                 dangerouslySetInnerHTML={{ __html: instrPlainText || 'No content' }}
                                             />
                                         )}
-                                        {currentHighlights.length > 0 && (
+                                        false && (
                                             <button
                                                 className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                                onClick={() => setSectionHighlights(prev => ({ ...prev, [highlightKey]: [] }))}
+                                                onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
                                             >
-                                                🗑 Clear highlights ({currentHighlights.length})
+                                                🗑 Clear highlights
                                             </button>
                                         )}
                                         {/* 2. Image after instructions */}
@@ -889,12 +874,12 @@ export default function IELTSExamPage() {
                             <div className="ip-passage-col">
                                 <div className="ip-passage-title-row">
                                     <h2 className="ip-passage-title">{section?.title}</h2>
-                                    {currentHighlights.length > 0 && (
+                                    false && (
                                         <button
                                             className="ip-hl-clear-btn"
-                                            onClick={() => setSectionHighlights(prev => ({ ...prev, [highlightKey]: [] }))}
+                                            onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
                                         >
-                                            🗑 Clear ({currentHighlights.length})
+                                            🗑 Clear
                                         </button>
                                     )}
                                 </div>
@@ -960,12 +945,12 @@ export default function IELTSExamPage() {
                                     className="ip-task-prompt ip-highlightable"
                                     dangerouslySetInnerHTML={{ __html: section?.passageContent || 'No task description provided.' }}
                                 />
-                                {currentHighlights.length > 0 && (
+                                false && (
                                     <button
                                         className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                        onClick={() => setSectionHighlights(prev => ({ ...prev, [highlightKey]: [] }))}
+                                        onClick={() => clearHighlightsFromContainer(examPaperRef.current)}
                                     >
-                                        🗑 Clear highlights ({currentHighlights.length})
+                                        🗑 Clear highlights
                                     </button>
                                 )}
                             </div>
