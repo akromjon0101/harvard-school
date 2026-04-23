@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { wrapRangeTextNodes } from '../utils/safeHighlight'
 import '../styles/student-exam.css'
-import '../styles/text-size.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
 
