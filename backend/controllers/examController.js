@@ -20,8 +20,9 @@ function normalizeSection(sec) {
 function normalizeModules(modules) {
     return {
         listening: (modules.listening || []).map(normalizeSection),
-        reading: (modules.reading || []).map(normalizeSection),
-        writing: (modules.writing || []).map(normalizeSection),
+        reading:   (modules.reading || []).map(normalizeSection),
+        writing:   (modules.writing || []).map(normalizeSection),
+        speaking:  (modules.speaking || []).map(normalizeSection),
     };
 }
 
@@ -35,8 +36,15 @@ export const createExam = async (req, res) => {
         }
 
         // Ensure modules structure is valid (basic check)
-        if (!modules || !modules.listening || !modules.reading || !modules.writing) {
-            return res.status(400).json({ error: 'Invalid exam structure: Missing modules' });
+        // Ensure at least one module is present
+        const hasAnyModule = modules && (
+            (modules.listening?.length > 0) ||
+            (modules.reading?.length > 0) ||
+            (modules.writing?.length > 0) ||
+            (modules.speaking?.length > 0)
+        );
+        if (!hasAnyModule) {
+            return res.status(400).json({ error: 'Invalid exam structure: At least one module with content is required' });
         }
 
         const normalizedModules = normalizeModules(modules);

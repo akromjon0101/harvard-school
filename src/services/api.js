@@ -18,12 +18,18 @@ if (typeof window !== 'undefined') {
 }
 
 export const api = async (endpoint, method = 'GET', body) => {
+  const token = localStorage.getItem('token')
+  const headers = {
+    'Content-Type': 'application/json'
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method,
-    credentials: 'include', // Important: allow browser to send/receive cookies
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    credentials: 'include',
+    headers,
     body: body ? JSON.stringify(body) : null
   })
 

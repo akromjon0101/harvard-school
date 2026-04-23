@@ -184,7 +184,7 @@ export default function IELTSExamPage() {
         setIsAudioPlaying(false)
         setAudioCheckConfirmed(false)
         setTestAudioPlayed(false)
-        clearHighlightsFromContainer(examPaperRef.current)
+
         setSelectionPopup({ visible: false, x: 0, y: 0 })
         setSessionElapsed(0)
         speakingSessionStartRef.current = null
