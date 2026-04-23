@@ -5,11 +5,88 @@
  * Step 2: Section-by-section question builder
  *         → "Review & Publish" opens ExamPreviewModal (the publish gateway)
  */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, BASE_URL } from '../../services/api'
 import '../../styles/test-creator.css'
 import ExamPreviewModal from '../../components/admin/ExamPreviewModal'
+
+// ─── Simple Rich Text Editor ─────────────────────────────────────────────────
+// Contenteditable toolbar with Bold, Italic, and font-size controls.
+// Stores content as HTML so formatting persists.
+function RichTextEditor({ value, onChange, placeholder, rows = 3, className = '' }) {
+  const ref = useRef(null)
+  const isFocusedRef = useRef(false)
+  const lastValueRef = useRef(value)
+
+  // Sync external value → DOM (only when not focused to avoid cursor jump)
+  useEffect(() => {
+    if (ref.current && !isFocusedRef.current && value !== lastValueRef.current) {
+      ref.current.innerHTML = value || ''
+      lastValueRef.current = value
+    }
+  }, [value])
+
+  // Initialize on mount
+  useEffect(() => {
+    if (ref.current) ref.current.innerHTML = value || ''
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const exec = (cmd, val) => {
+    ref.current?.focus()
+    document.execCommand(cmd, false, val ?? undefined)
+    handleChange()
+  }
+
+  const handleChange = useCallback(() => {
+    const html = ref.current?.innerHTML || ''
+    lastValueRef.current = html
+    onChange(html)
+  }, [onChange])
+
+  const handleFontSize = (e) => {
+    const size = e.target.value
+    if (!size) return
+    exec('fontSize', size)
+    e.target.value = ''
+  }
+
+  return (
+    <div className={`rte-wrapper ${className}`}>
+      <div className="rte-toolbar" onMouseDown={e => e.preventDefault()}>
+        <button type="button" className="rte-btn rte-bold" onClick={() => exec('bold')} title="Bold (Ctrl+B)">
+          <b>B</b>
+        </button>
+        <button type="button" className="rte-btn rte-italic" onClick={() => exec('italic')} title="Italic (Ctrl+I)">
+          <i>I</i>
+        </button>
+        <div className="rte-divider" />
+        <select className="rte-size-sel" onChange={handleFontSize} defaultValue="">
+          <option value="" disabled>Size</option>
+          <option value="2">Small</option>
+          <option value="3">Normal</option>
+          <option value="5">Large</option>
+          <option value="6">X-Large</option>
+        </select>
+        <div className="rte-divider" />
+        <button type="button" className="rte-btn rte-clear" onClick={() => { exec('removeFormat'); exec('unlink') }} title="Remove formatting">
+          ✕ Clear
+        </button>
+      </div>
+      <div
+        ref={ref}
+        className="rte-content"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleChange}
+        onFocus={() => { isFocusedRef.current = true }}
+        onBlur={() => { isFocusedRef.current = false; handleChange() }}
+        data-placeholder={placeholder}
+        style={{ minHeight: `${rows * 1.7}em` }}
+      />
+    </div>
+  )
+}
 
 // ─── Question type catalogue with IELTS examples ────────────────────────────
 const QUESTION_TYPES = {
@@ -776,9 +853,9 @@ export default function TestCreator() {
               <div className="tc-field-row tc-section-meta-fields">
                 <div className="tc-field half">
                   <label className="tc-label">Section Instructions <span className="tc-opt">(shown to student)</span></label>
-                  <input
-                    className="tc-input"
-                    type="text"
+                  <RichTextEditor
+                    value={currentSection.instructions || ''}
+                    onChange={val => updateCurrentSection('instructions', val)}
                     placeholder={
                       currentKey.mod === 'listening'
                         ? 'e.g. Questions 1–10. Complete the form below. Write NO MORE THAN TWO WORDS.'
@@ -788,10 +865,9 @@ export default function TestCreator() {
                             ? 'e.g. Part 1: The examiner will ask you questions about yourself and familiar topics.'
                             : 'e.g. Write at least 150 words in response to the task below.'
                     }
-                    value={currentSection.instructions || ''}
-                    onChange={e => updateCurrentSection('instructions', e.target.value)}
+                    rows={2}
                   />
-                  <span className="tc-hint">Displayed as a banner at the top of this section during the exam.</span>
+                  <span className="tc-hint">Displayed as a banner at the top of this section. Supports <b>bold</b> and font size.</span>
                 </div>
                 <div className="tc-field quarter">
                   <label className="tc-label">Question Range <span className="tc-opt">(optional)</span></label>
@@ -1261,14 +1337,13 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
             ))}
           </div>
         )}
-        <input
-          className="tc-input"
-          type="text"
+        <RichTextEditor
           value={q.instructionText || ''}
-          onChange={e => update('instructionText', e.target.value)}
-          placeholder="Instruction text shown above the question..."
+          onChange={val => update('instructionText', val)}
+          placeholder="Instruction text shown above the question (e.g. Write NO MORE THAN TWO WORDS)..."
+          rows={2}
         />
-        <span className="tc-hint">This appears as the section header in the exam (e.g. "Write NO MORE THAN TWO WORDS").</span>
+        <span className="tc-hint">Shown above the question group in the exam. Supports <b>bold</b> and font size for emphasis.</span>
       </div>
 
       {/* Gap-fill question text */}

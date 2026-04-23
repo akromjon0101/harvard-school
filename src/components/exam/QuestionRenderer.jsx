@@ -9,8 +9,13 @@ import SummaryPhraseBank from './SummaryPhraseBank';
 import MatchingHeadings from './MatchingHeadings';
 import ChooseFromBox from './ChooseFromBox';
 import TrueFalseNotGiven from './TrueFalseNotGiven';
+import { renderHighlightedText, stripHtml } from '../../utils/highlightUtils';
 
-const QuestionRenderer = ({ type, data, value, onChange, qNumber, hideInstruction }) => {
+const QuestionRenderer = ({
+    type, data, value, onChange, qNumber, hideInstruction,
+    // Highlight props for instruction text
+    instrHighlights, instrRef, onInstrMouseUp, onInstrClick,
+}) => {
 
     // Shared formatting for MCQ/Matching
     const getOptions = () => {
@@ -134,11 +139,56 @@ const QuestionRenderer = ({ type, data, value, onChange, qNumber, hideInstructio
         }
     };
 
+    // Render instruction text: supports HTML markup (from rich text editor) and highlights
+    const renderInstruction = () => {
+        if (!data.instructionText || hideInstruction) return null
+
+        const hasHighlights = instrHighlights?.length > 0
+        // When highlights exist, render plain text + marks; otherwise render HTML (supports bold/size)
+        const plainText = stripHtml(data.instructionText)
+
+        if (hasHighlights) {
+            return (
+                <div
+                    ref={instrRef}
+                    className="ip-content-instructions ip-highlightable"
+                    onMouseUp={onInstrMouseUp}
+                    onClick={onInstrClick}
+                >
+                    {renderHighlightedText(plainText, instrHighlights)}
+                </div>
+            )
+        }
+
+        // Check if content has HTML tags (rich text from admin)
+        const hasHtml = /<[^>]+>/.test(data.instructionText)
+        if (hasHtml) {
+            return (
+                <div
+                    ref={instrRef}
+                    className="ip-content-instructions ip-highlightable"
+                    onMouseUp={onInstrMouseUp}
+                    onClick={onInstrClick}
+                    dangerouslySetInnerHTML={{ __html: data.instructionText }}
+                />
+            )
+        }
+
+        return (
+            <div
+                ref={instrRef}
+                className="ip-content-instructions ip-highlightable"
+                onMouseUp={onInstrMouseUp}
+                onClick={onInstrClick}
+            >
+                {data.instructionText}
+            </div>
+        )
+    }
+
     return (
         <div className="ielts-question-block-container">
-            {data.instructionText && !hideInstruction && (
-                <div className="ip-content-instructions">{data.instructionText}</div>
-            )}
+            {renderInstruction()}
             {data.image && (
                 <div className="q-block-image-holder" style={{ marginBottom: '20px', textAlign: 'center' }}>
                     <img src={data.image} alt="Task Diagram" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }} />

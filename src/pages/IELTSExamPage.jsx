@@ -3,89 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
+import { renderHighlightedText, getCaretOffset, stripHtml } from '../utils/highlightUtils'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-// Renders passage text with highlights as React elements (no dangerouslySetInnerHTML)
-// This gives a predictable DOM structure: textNode | <mark>textNode</mark> | textNode ...
-function renderHighlightedText(rawText, highlights) {
-    const text = normalizeText(rawText)
-    if (!text) return null
-    if (!highlights?.length) return text
-    const sorted = highlights.map((h, i) => ({ ...h, origIdx: i })).sort((a, b) => a.start - b.start)
-    const parts = []
-    let cursor = 0
-    for (const h of sorted) {
-        if (h.start >= cursor && h.end > h.start) {
-            if (h.start > cursor) parts.push(text.slice(cursor, h.start))
-            parts.push(
-                <mark
-                    key={`hl-${h.start}`}
-                    className={`ip-text-highlight ip-hl-${h.color || 'yellow'}`}
-                    data-hl={h.origIdx}
-                    title="Click to remove"
-                >
-                    {text.slice(h.start, h.end)}
-                </mark>
-            )
-            cursor = h.end
-        }
-    }
-    if (cursor < text.length) parts.push(text.slice(cursor))
-    return parts
-}
-
-// Normalize line endings so DOM text nodes and raw string match
-function normalizeText(str) {
-    return str ? str.replace(/\r\n/g, '\n').replace(/\r/g, '\n') : ''
-}
-
-// Accurate caret offset using recursive DOM walk
-// Handles text nodes, element nodes, and marks correctly
-function getCaretOffset(container, targetNode, targetOffset) {
-    // Case: selection boundary is at the container element itself
-    if (targetNode === container) {
-        let t = 0
-        for (let i = 0; i < targetOffset; i++) {
-            t += container.childNodes[i]?.textContent?.length || 0
-        }
-        return t
-    }
-    let total = 0
-    let found = false
-    function walk(node) {
-        if (found) return
-        if (node === targetNode) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                total += targetOffset
-            } else {
-                // element node: targetOffset is child index
-                for (let i = 0; i < targetOffset && i < node.childNodes.length; i++) {
-                    total += node.childNodes[i].textContent.length
-                }
-            }
-            found = true
-            return
-        }
-        if (node.nodeType === Node.TEXT_NODE) {
-            total += node.nodeValue.length
-        } else {
-            for (const child of node.childNodes) {
-                if (found) return
-                walk(child)
-            }
-        }
-    }
-    for (const child of container.childNodes) {
-        if (found) break
-        walk(child)
-    }
-    return total
-}
 
 // Count how many question slots a question block occupies
 function getQCount(q) {
@@ -166,7 +88,8 @@ function WritingArea({ sectionIdx, value, onChange }) {
 // moduleAnswers: plain {qNum: answer} map for QuestionRenderer
 // module: current module string (for flag key)
 // onFocus: called with qNum when user interacts with this block
-function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onToggleFlag, onFocus, hideInstruction }) {
+function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onToggleFlag, onFocus, hideInstruction,
+    instrHighlights, instrRef, onInstrMouseUp, onInstrClick }) {
     const qNum = q.startNumber ?? q.questionNumber
     const isFlagged = !!flagged[`${module}_${qNum}`]
 
@@ -190,6 +113,10 @@ function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onTog
                 onChange={onChange}
                 qNumber={qNum}
                 hideInstruction={hideInstruction}
+                instrHighlights={instrHighlights}
+                instrRef={instrRef}
+                onInstrMouseUp={onInstrMouseUp}
+                onInstrClick={onInstrClick}
             />
         </div>
     )
@@ -214,10 +141,12 @@ export default function IELTSExamPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
-    // Highlight state (reading + listening passages)
+    // Highlight state (reading + listening passages + question instructions)
     const passageRef = useRef(null)
+    const instrRefs  = useRef({})    // qi → { current: null } — for question instruction highlights
     const [sectionHighlights, setSectionHighlights] = useState({})
-    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0, start: 0, end: 0 })
+    // hlTarget: null = passage, { type:'instr', qi } = question instruction
+    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0, start: 0, end: 0, hlTarget: null })
 
     // Audio state
     const audioRef = useRef(null)
@@ -259,7 +188,7 @@ export default function IELTSExamPage() {
         setAudioCheckConfirmed(false)
         setTestAudioPlayed(false)
         setSectionHighlights({})
-        setSelectionPopup({ visible: false, x: 0, y: 0, start: 0, end: 0 })
+        setSelectionPopup({ visible: false, x: 0, y: 0, start: 0, end: 0, hlTarget: null })
         setShowSubmitConfirm(false)
         setTimeLeft(null)
         // Restore saved answers/flags for THIS exam
@@ -613,18 +542,58 @@ export default function IELTSExamPage() {
             const endOffset = getCaretOffset(el, range.endContainer, range.endOffset)
             if (endOffset <= startOffset) { setSelectionPopup(p => ({ ...p, visible: false })); return }
             const rect = range.getBoundingClientRect()
-            setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: rect.top, start: startOffset, end: endOffset })
+            setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: rect.top, start: startOffset, end: endOffset, hlTarget: null })
         } catch { setSelectionPopup(p => ({ ...p, visible: false })) }
     }, [])
 
-    const applyHighlight = useCallback((color = 'yellow') => {
+    // ── Question instruction highlight handlers ────────────────────────────────
+    const getInstrRef = useCallback((qi) => {
+        if (!instrRefs.current[qi]) instrRefs.current[qi] = { current: null }
+        return instrRefs.current[qi]
+    }, [])
+
+    const handleInstrMouseUp = useCallback((qi, e) => {
+        if (e.target.closest('mark.ip-text-highlight')) return
+        const selection = window.getSelection()
+        if (!selection || selection.isCollapsed) { setSelectionPopup(p => ({ ...p, visible: false })); return }
+        const selectedText = selection.toString()
+        if (selectedText.trim().length < 2) { setSelectionPopup(p => ({ ...p, visible: false })); return }
+        const range = selection.getRangeAt(0)
+        const el = instrRefs.current[qi]?.current
+        if (!el || !el.contains(range.commonAncestorContainer)) { setSelectionPopup(p => ({ ...p, visible: false })); return }
+        try {
+            const startOffset = getCaretOffset(el, range.startContainer, range.startOffset)
+            const endOffset   = getCaretOffset(el, range.endContainer,   range.endOffset)
+            if (endOffset <= startOffset) { setSelectionPopup(p => ({ ...p, visible: false })); return }
+            const rect = range.getBoundingClientRect()
+            setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: rect.top, start: startOffset, end: endOffset, hlTarget: { type: 'instr', qi } })
+        } catch { setSelectionPopup(p => ({ ...p, visible: false })) }
+    }, [])
+
+    const handleInstrClick = useCallback((qi, e) => {
+        const mark = e.target.closest('mark.ip-text-highlight')
+        if (!mark) return
+        const idx = parseInt(mark.dataset.hl, 10)
+        if (isNaN(idx)) return
+        const key = `instr_${partIndex}_${qi}`
         setSectionHighlights(prev => ({
             ...prev,
-            [highlightKey]: [...(prev[highlightKey] || []), { start: selectionPopup.start, end: selectionPopup.end, color }]
+            [key]: (prev[key] || []).filter((_, i) => i !== idx)
+        }))
+    }, [partIndex])
+
+    const applyHighlight = useCallback((color = 'yellow') => {
+        const { hlTarget, start, end } = selectionPopup
+        const key = hlTarget?.type === 'instr'
+            ? `instr_${partIndex}_${hlTarget.qi}`
+            : highlightKey
+        setSectionHighlights(prev => ({
+            ...prev,
+            [key]: [...(prev[key] || []), { start, end, color }]
         }))
         setSelectionPopup(p => ({ ...p, visible: false }))
         window.getSelection()?.removeAllRanges()
-    }, [selectionPopup, highlightKey])
+    }, [selectionPopup, highlightKey, partIndex])
 
     const handlePassageClick = useCallback((e) => {
         const mark = e.target.closest('mark.ip-text-highlight')
@@ -644,6 +613,9 @@ export default function IELTSExamPage() {
         return `Part ${idx + 1}`
     }
 
+    // Reset instrRefs when part changes so stale refs don't linger
+    useEffect(() => { instrRefs.current = {} }, [partIndex])
+
     // ── Shared question list renderer ────────────────────────────────────────
     const renderQuestions = useCallback(() => {
         if (!section?.questions?.length) {
@@ -652,6 +624,8 @@ export default function IELTSExamPage() {
         return section.questions.map((q, i) => {
             const prevQ = i > 0 ? section.questions[i - 1] : null;
             const hideInstruction = prevQ && prevQ.instructionText && prevQ.instructionText === q.instructionText;
+            const instrKey = `instr_${partIndex}_${i}`
+            const instrHighlights = sectionHighlights[instrKey] || []
 
             return (
                 <PaperQuestionBlock
@@ -664,10 +638,15 @@ export default function IELTSExamPage() {
                     onToggleFlag={toggleFlag}
                     onFocus={setActiveQuestion}
                     hideInstruction={hideInstruction}
+                    instrHighlights={instrHighlights}
+                    instrRef={getInstrRef(i)}
+                    onInstrMouseUp={(e) => handleInstrMouseUp(i, e)}
+                    onInstrClick={(e) => handleInstrClick(i, e)}
                 />
             );
         });
-    }, [section, moduleAnswers, currentModule, handleAnswerChange, flagged, toggleFlag])
+    }, [section, moduleAnswers, currentModule, handleAnswerChange, flagged, toggleFlag,
+        sectionHighlights, partIndex, getInstrRef, handleInstrMouseUp, handleInstrClick])
 
     // ── Loading / empty states ────────────────────────────────────────────────
     if (!exam) return (
@@ -739,9 +718,10 @@ export default function IELTSExamPage() {
 
             {/* ── INSTRUCTIONS BANNER (reading / speaking only — listening shows inline) ── */}
             {section?.instructions && !isWriting && !isListening && (
-                <div className="ip-instructions-banner">
-                    {section.instructions}
-                </div>
+                <div
+                    className="ip-instructions-banner"
+                    dangerouslySetInnerHTML={{ __html: section.instructions }}
+                />
             )}
 
             {/* ── AUDIO CHECK OVERLAY (listening only, once per exam) ── */}
@@ -826,20 +806,65 @@ export default function IELTSExamPage() {
                             </div>
 
                             {/* Content: split if passage, full-width if not */}
-                            {section?.passageContent ? (
-                                <div className="ip-listening-split">
-                                    <div className="ip-listening-left">
-                                        {section?.instructions && (
-                                            <p className="ip-listening-instr-label">{section.instructions}</p>
-                                        )}
-                                        <div
-                                            ref={passageRef}
-                                            className="ip-context-box ip-highlightable"
-                                            onMouseUp={handlePassageMouseUp}
-                                            onClick={handlePassageClick}
-                                        >
-                                            {renderHighlightedText(section.passageContent, currentHighlights)}
+                            {(() => {
+                                const sectionImage = section?.media?.find(m => m.type === 'image')
+                                const instrPlainText = stripHtml(section?.instructions || '')
+
+                                if (section?.passageContent) {
+                                    return (
+                                        <div className="ip-listening-split">
+                                            <div className="ip-listening-left">
+                                                {/* 1. Instructions first */}
+                                                {section?.instructions && (
+                                                    <p className="ip-listening-instr-label"
+                                                       dangerouslySetInnerHTML={{ __html: section.instructions }} />
+                                                )}
+                                                {/* 2. Image after instructions */}
+                                                {sectionImage && (
+                                                    <img
+                                                        src={sectionImage.url}
+                                                        alt="Listening diagram"
+                                                        className="ip-listening-image"
+                                                    />
+                                                )}
+                                                {/* 3. Passage (highlightable) */}
+                                                <div
+                                                    ref={passageRef}
+                                                    className="ip-context-box ip-highlightable"
+                                                    onMouseUp={handlePassageMouseUp}
+                                                    onClick={handlePassageClick}
+                                                >
+                                                    {renderHighlightedText(section.passageContent, currentHighlights)}
+                                                </div>
+                                                {currentHighlights.length > 0 && (
+                                                    <button
+                                                        className="ip-hl-clear-btn ip-hl-clear-btn--block"
+                                                        onClick={() => setSectionHighlights(prev => ({ ...prev, [highlightKey]: [] }))}
+                                                    >
+                                                        🗑 Clear highlights ({currentHighlights.length})
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="ip-listening-right">
+                                                {renderQuestions()}
+                                            </div>
                                         </div>
+                                    )
+                                }
+
+                                return (
+                                    <div className="ip-listening-full">
+                                        {/* 1. Instructions as highlightable text — student can mark key words */}
+                                        {instrPlainText && (
+                                            <div
+                                                ref={passageRef}
+                                                className="ip-listening-instr-hl ip-highlightable"
+                                                onMouseUp={handlePassageMouseUp}
+                                                onClick={handlePassageClick}
+                                            >
+                                                {renderHighlightedText(instrPlainText, currentHighlights)}
+                                            </div>
+                                        )}
                                         {currentHighlights.length > 0 && (
                                             <button
                                                 className="ip-hl-clear-btn ip-hl-clear-btn--block"
@@ -848,35 +873,19 @@ export default function IELTSExamPage() {
                                                 🗑 Clear highlights ({currentHighlights.length})
                                             </button>
                                         )}
-                                    </div>
-                                    <div className="ip-listening-right">
+                                        {/* 2. Image after instructions */}
+                                        {sectionImage && (
+                                            <img
+                                                src={sectionImage.url}
+                                                alt="Listening diagram"
+                                                className="ip-listening-image"
+                                            />
+                                        )}
+                                        {/* 3. Questions */}
                                         {renderQuestions()}
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="ip-listening-full">
-                                    {/* Instructions as highlightable text — student can mark key words */}
-                                    {section?.instructions && (
-                                        <div
-                                            ref={passageRef}
-                                            className="ip-listening-instr-hl ip-highlightable"
-                                            onMouseUp={handlePassageMouseUp}
-                                            onClick={handlePassageClick}
-                                        >
-                                            {renderHighlightedText(section.instructions, currentHighlights)}
-                                        </div>
-                                    )}
-                                    {currentHighlights.length > 0 && (
-                                        <button
-                                            className="ip-hl-clear-btn ip-hl-clear-btn--block"
-                                            onClick={() => setSectionHighlights(prev => ({ ...prev, [highlightKey]: [] }))}
-                                        >
-                                            🗑 Clear highlights ({currentHighlights.length})
-                                        </button>
-                                    )}
-                                    {renderQuestions()}
-                                </div>
-                            )}
+                                )
+                            })()}
                         </>
                     )}
 
