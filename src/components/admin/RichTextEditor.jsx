@@ -6,6 +6,7 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
   const ref = useRef(null);
   const isFocusedRef = useRef(false);
   const lastValueRef = useRef(value);
+  const savedRangeRef = useRef(null);  // save selection before dropdown opens
 
   // Sync external value -> DOM (only when not focused to avoid cursor jump)
   useEffect(() => {
@@ -20,8 +21,27 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
     if (ref.current) ref.current.innerHTML = value || '';
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const exec = (cmd, val) => {
+  // Save current selection range so we can restore it after clicking toolbar controls
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  // Restore saved selection back into the contenteditable
+  const restoreSelection = () => {
+    if (!savedRangeRef.current) return;
     ref.current?.focus();
+    const sel = window.getSelection();
+    if (sel) {
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+    }
+  };
+
+  const exec = (cmd, val) => {
+    restoreSelection();
     document.execCommand(cmd, false, val ?? undefined);
     handleChange();
   };
@@ -41,7 +61,7 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
 
   return (
     <div className={`rte-wrapper ${className}`}>
-      <div className="rte-toolbar" onMouseDown={e => e.preventDefault()}>
+      <div className="rte-toolbar" onMouseDown={e => { e.preventDefault(); saveSelection(); }}>
         <button type="button" className="rte-btn rte-bold" onClick={() => exec('bold')} title="Bold (Ctrl+B)">
           <b>B</b>
         </button>
@@ -49,7 +69,7 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
           <i>I</i>
         </button>
         <div className="rte-divider" />
-        <select className="rte-size-sel" onChange={handleFontSize} defaultValue="">
+        <select className="rte-size-sel" onMouseDown={saveSelection} onChange={handleFontSize} defaultValue="">
           <option value="" disabled>Size</option>
           <option value="2">Small</option>
           <option value="3">Normal</option>
@@ -67,6 +87,8 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
         contentEditable
         suppressContentEditableWarning
         onInput={handleChange}
+        onKeyUp={saveSelection}
+        onMouseUp={saveSelection}
         onFocus={() => { isFocusedRef.current = true; }}
         onBlur={() => { isFocusedRef.current = false; handleChange(); }}
         data-placeholder={placeholder}

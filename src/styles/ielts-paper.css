@@ -2993,6 +2993,16 @@
   letter-spacing: 0.03em;
 }
 
+/* Elapsed counter inside recording header (counts up: 0:01, 0:02...) */
+.sh-rec-elapsed {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 700;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
 .sh-rec-dot {
   width: 10px;
   height: 10px;

@@ -556,8 +556,8 @@ export default function SpeakingHero({
                     </button>
                 </div>
 
-                {/* ── 2-column: topic card + note card (side by side = less scroll) ── */}
-                <div className="sh-p2-cards-row">
+                {/* ── Cards: topic card always shown; note card appears after prep starts ── */}
+                <div className={`sh-p2-cards-row${prepPhase !== 'none' ? ' sh-p2-cards-row--prep' : ''}`}>
                     {section?.passageContent && (
                         <div className="sh-cuecard sh-p2-card">
                             <div className="sh-cuecard-label">
@@ -567,16 +567,19 @@ export default function SpeakingHero({
                             <div className="sh-cuecard-body" dangerouslySetInnerHTML={{ __html: section.passageContent }} />
                         </div>
                     )}
-                    <div className="sh-notecard sh-p2-card">
-                        <div className="sh-notecard-label">📝 Notes</div>
-                        <textarea
-                            className="sh-notecard-textarea"
-                            value={notes}
-                            onChange={e => setNotes(e.target.value)}
-                            placeholder={prepPhase === 'prep' ? 'Jot key points here…' : 'Your notes…'}
-                            readOnly={!!blobUrl && !speakingRecording}
-                        />
-                    </div>
+                    {/* Note card only appears after "Start Preparation" is clicked */}
+                    {prepPhase !== 'none' && (
+                        <div className="sh-notecard sh-p2-card">
+                            <div className="sh-notecard-label">📝 Notes</div>
+                            <textarea
+                                className="sh-notecard-textarea"
+                                value={notes}
+                                onChange={e => setNotes(e.target.value)}
+                                placeholder={prepPhase === 'prep' ? 'Jot key points here…' : 'Your notes…'}
+                                readOnly={!!blobUrl && !speakingRecording}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {isAdmin ? (
@@ -634,6 +637,7 @@ export default function SpeakingHero({
                                     <div className="sh-rec-live">
                                         <span className="sh-rec-dot" />
                                         <span>Recording</span>
+                                        <span className="sh-rec-elapsed">{fmt(elapsed)}</span>
                                     </div>
                                     <button className="sh-btn-stop" onClick={stopP2}>
                                         <Square size={14} /> Stop
@@ -799,6 +803,7 @@ export default function SpeakingHero({
                                 <div className="sh-rec-live">
                                     <span className="sh-rec-dot" />
                                     <span>Recording</span>
+                                    <span className="sh-rec-elapsed">{fmt(qElapsed)}</span>
                                 </div>
                                 <button className="sh-btn-stop" onClick={stopRecording}>
                                     <Square size={14} /> Stop

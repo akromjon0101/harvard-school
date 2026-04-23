@@ -609,8 +609,9 @@ export default function IELTSExamPage() {
 
     // Apply recorded highlights to DOM when they change or component re-renders
     useEffect(() => {
-        if (!passageRef.current || !passageRef.current.innerHTML) return;
-        // First, reset inner content to pristine state because applyHighlights mutates it
+        if (!passageRef.current) return;
+        // Reset to pristine content (applyHighlightsToContainer mutates DOM with <mark> tags,
+        // so we must reset innerHTML before re-applying highlights each time)
         if (isReading) {
             passageRef.current.innerHTML = section?.passageContent || 'Passage content not available.';
         } else if (isListening) {
@@ -618,9 +619,9 @@ export default function IELTSExamPage() {
         } else if (isWriting) {
             passageRef.current.innerHTML = section?.passageContent || 'No task description provided.';
         }
-        
+
         applyHighlightsToContainer(passageRef.current, currentHighlights);
-        
+
         // Add click listeners to instantiated marks
         const marks = passageRef.current.querySelectorAll('mark.ip-text-highlight');
         marks.forEach(m => {
@@ -1100,7 +1101,7 @@ export default function IELTSExamPage() {
             {selectionPopup.visible && (
                 <div
                     className="ip-selection-popup"
-                    style={{ left: selectionPopup.x, top: selectionPopup.y }}
+                    style={{ left: selectionPopup.x, top: Math.max(70, selectionPopup.y) }}
                     onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
                 >
                     <span className="ip-hl-popup-label">Highlight</span>
