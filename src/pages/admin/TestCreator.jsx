@@ -570,6 +570,10 @@ export default function TestCreator() {
         writing: (sections.writing || []).map(normalizeSection),
         speaking: (sections.speaking || []).map(normalizeSpeakingSection),
       }
+
+      const endpoint = isEditMode ? `/exams/${examId}` : '/exams'
+      const method = isEditMode ? 'PUT' : 'POST'
+
       await api(endpoint, method, { title, description, status: saveStatus, modules, aiGradingEnabled })
       navigate('/admin/exams')
     } catch (err) {
