@@ -50,6 +50,12 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
     onChange(html);
   }, [onChange]);
 
+  const handleFontSize = (e) => {
+    const size = e.target.value;
+    if (!size) return;
+    exec('fontSize', size);
+    e.target.value = '';
+  };
 
   return (
     <div className={`rte-wrapper ${className}`}>
@@ -66,6 +72,60 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
         <button type="button" className="rte-btn" onClick={() => exec('underline')} title="Underline (Ctrl+U)">
           <u>U</u>
         </button>
+
+        <div className="rte-divider" />
+
+        {/* Font size dropdown */}
+        <select
+          className="rte-size-sel"
+          onMouseDown={saveSelection}
+          onChange={handleFontSize}
+          defaultValue=""
+          title="Font size"
+        >
+          <option value="" disabled>Size</option>
+          <option value="1">XS</option>
+          <option value="2">Small</option>
+          <option value="3">Normal</option>
+          <option value="4">Medium</option>
+          <option value="5">Large</option>
+          <option value="6">XL</option>
+          <option value="7">XXL</option>
+        </select>
+
+        <div className="rte-divider" />
+
+        {/* Quick font-size increase/decrease */}
+        <button
+          type="button"
+          className="rte-btn"
+          title="Increase font size"
+          onClick={() => {
+            restoreSelection();
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const el = sel.getRangeAt(0).startContainer.parentElement;
+              const curSize = parseInt(el?.dataset?.fontSize || el?.style?.fontSize || '3');
+              const next = Math.min(7, (curSize || 3) + 1);
+              exec('fontSize', String(next));
+            }
+          }}
+        >A+</button>
+        <button
+          type="button"
+          className="rte-btn"
+          title="Decrease font size"
+          onClick={() => {
+            restoreSelection();
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const el = sel.getRangeAt(0).startContainer.parentElement;
+              const curSize = parseInt(el?.dataset?.fontSize || el?.style?.fontSize || '3');
+              const prev = Math.max(1, (curSize || 3) - 1);
+              exec('fontSize', String(prev));
+            }
+          }}
+        >A-</button>
 
         <div className="rte-divider" />
 
