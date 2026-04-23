@@ -11,82 +11,7 @@ import { api, BASE_URL } from '../../services/api'
 import '../../styles/test-creator.css'
 import ExamPreviewModal from '../../components/admin/ExamPreviewModal'
 
-// ─── Simple Rich Text Editor ─────────────────────────────────────────────────
-// Contenteditable toolbar with Bold, Italic, and font-size controls.
-// Stores content as HTML so formatting persists.
-function RichTextEditor({ value, onChange, placeholder, rows = 3, className = '' }) {
-  const ref = useRef(null)
-  const isFocusedRef = useRef(false)
-  const lastValueRef = useRef(value)
-
-  // Sync external value → DOM (only when not focused to avoid cursor jump)
-  useEffect(() => {
-    if (ref.current && !isFocusedRef.current && value !== lastValueRef.current) {
-      ref.current.innerHTML = value || ''
-      lastValueRef.current = value
-    }
-  }, [value])
-
-  // Initialize on mount
-  useEffect(() => {
-    if (ref.current) ref.current.innerHTML = value || ''
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const exec = (cmd, val) => {
-    ref.current?.focus()
-    document.execCommand(cmd, false, val ?? undefined)
-    handleChange()
-  }
-
-  const handleChange = useCallback(() => {
-    const html = ref.current?.innerHTML || ''
-    lastValueRef.current = html
-    onChange(html)
-  }, [onChange])
-
-  const handleFontSize = (e) => {
-    const size = e.target.value
-    if (!size) return
-    exec('fontSize', size)
-    e.target.value = ''
-  }
-
-  return (
-    <div className={`rte-wrapper ${className}`}>
-      <div className="rte-toolbar" onMouseDown={e => e.preventDefault()}>
-        <button type="button" className="rte-btn rte-bold" onClick={() => exec('bold')} title="Bold (Ctrl+B)">
-          <b>B</b>
-        </button>
-        <button type="button" className="rte-btn rte-italic" onClick={() => exec('italic')} title="Italic (Ctrl+I)">
-          <i>I</i>
-        </button>
-        <div className="rte-divider" />
-        <select className="rte-size-sel" onChange={handleFontSize} defaultValue="">
-          <option value="" disabled>Size</option>
-          <option value="2">Small</option>
-          <option value="3">Normal</option>
-          <option value="5">Large</option>
-          <option value="6">X-Large</option>
-        </select>
-        <div className="rte-divider" />
-        <button type="button" className="rte-btn rte-clear" onClick={() => { exec('removeFormat'); exec('unlink') }} title="Remove formatting">
-          ✕ Clear
-        </button>
-      </div>
-      <div
-        ref={ref}
-        className="rte-content"
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleChange}
-        onFocus={() => { isFocusedRef.current = true }}
-        onBlur={() => { isFocusedRef.current = false; handleChange() }}
-        data-placeholder={placeholder}
-        style={{ minHeight: `${rows * 1.7}em` }}
-      />
-    </div>
-  )
-}
+import RichTextEditor from '../../components/admin/RichTextEditor'
 
 // ─── Question type catalogue with IELTS examples ────────────────────────────
 const QUESTION_TYPES = {
@@ -956,12 +881,11 @@ export default function TestCreator() {
               {currentKey.mod === 'reading' && (
                 <div className="tc-field" style={{ marginBottom: 0 }}>
                   <label className="tc-label">Passage Text</label>
-                  <textarea
-                    className="tc-textarea large"
-                    rows={10}
-                    placeholder="Paste the full reading passage here. Paragraph breaks will be preserved exactly as you type them. Students will see this text on the left side of the screen while answering questions."
+                  <RichTextEditor
                     value={currentSection.passageContent}
-                    onChange={e => updateCurrentSection('passageContent', e.target.value)}
+                    onChange={val => updateCurrentSection('passageContent', val)}
+                    placeholder="Paste the full reading passage here. Students will see this text on the left side of the screen while answering questions."
+                    rows={10}
                   />
                   <span className="tc-hint">
                     Tip: Press Enter twice between paragraphs. The passage appears alongside questions during the exam.
@@ -1043,16 +967,15 @@ export default function TestCreator() {
                 <>
                   <div className="tc-field" style={{ marginBottom: 0 }}>
                     <label className="tc-label">Writing Task Prompt</label>
-                    <textarea
-                      className="tc-textarea"
-                      rows={6}
+                    <RichTextEditor
+                      value={currentSection.passageContent}
+                      onChange={val => updateCurrentSection('passageContent', val)}
                       placeholder={
                         currentSection.title === 'Task 1'
                           ? 'e.g. The chart below shows the percentage of household income spent on food in different countries in 2020. Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.'
                           : 'e.g. Some people believe that university education should be free for all students. Others argue that students should pay tuition fees. Discuss both views and give your own opinion. Write at least 250 words.'
                       }
-                      value={currentSection.passageContent}
-                      onChange={e => updateCurrentSection('passageContent', e.target.value)}
+                      rows={6}
                     />
                     <span className="tc-hint">
                       {currentSection.title === 'Task 1'
@@ -1942,12 +1865,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
       {q.type === 'short-answer' && (
         <div className="tc-field">
           <label className="tc-label">Question(s)</label>
-          <textarea
-            className="tc-textarea"
-            rows={4}
+          <RichTextEditor
             value={q.questionText || ''}
-            onChange={e => update('questionText', e.target.value)}
+            onChange={val => update('questionText', val)}
             placeholder={'Q1: What year was the museum founded?\nQ2: How many employees work at the site?\nQ3: Which city is the headquarters located in?'}
+            rows={4}
           />
           <span className="tc-hint">
             Students answer using words taken directly from the passage (maximum 3 words).

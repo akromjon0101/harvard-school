@@ -1,0 +1,77 @@
+import React, { useRef, useEffect, useCallback } from 'react';
+
+// Content-editable toolbar with Bold, Italic, and font-size controls.
+// Stores content as HTML so formatting persists.
+export default function RichTextEditor({ value, onChange, placeholder, rows = 3, className = '' }) {
+  const ref = useRef(null);
+  const isFocusedRef = useRef(false);
+  const lastValueRef = useRef(value);
+
+  // Sync external value -> DOM (only when not focused to avoid cursor jump)
+  useEffect(() => {
+    if (ref.current && !isFocusedRef.current && value !== lastValueRef.current) {
+      ref.current.innerHTML = value || '';
+      lastValueRef.current = value;
+    }
+  }, [value]);
+
+  // Initialize on mount
+  useEffect(() => {
+    if (ref.current) ref.current.innerHTML = value || '';
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const exec = (cmd, val) => {
+    ref.current?.focus();
+    document.execCommand(cmd, false, val ?? undefined);
+    handleChange();
+  };
+
+  const handleChange = useCallback(() => {
+    const html = ref.current?.innerHTML || '';
+    lastValueRef.current = html;
+    onChange(html);
+  }, [onChange]);
+
+  const handleFontSize = (e) => {
+    const size = e.target.value;
+    if (!size) return;
+    exec('fontSize', size);
+    e.target.value = '';
+  };
+
+  return (
+    <div className={`rte-wrapper ${className}`}>
+      <div className="rte-toolbar" onMouseDown={e => e.preventDefault()}>
+        <button type="button" className="rte-btn rte-bold" onClick={() => exec('bold')} title="Bold (Ctrl+B)">
+          <b>B</b>
+        </button>
+        <button type="button" className="rte-btn rte-italic" onClick={() => exec('italic')} title="Italic (Ctrl+I)">
+          <i>I</i>
+        </button>
+        <div className="rte-divider" />
+        <select className="rte-size-sel" onChange={handleFontSize} defaultValue="">
+          <option value="" disabled>Size</option>
+          <option value="2">Small</option>
+          <option value="3">Normal</option>
+          <option value="5">Large</option>
+          <option value="6">X-Large</option>
+        </select>
+        <div className="rte-divider" />
+        <button type="button" className="rte-btn rte-clear" onClick={() => { exec('removeFormat'); exec('unlink') }} title="Remove formatting">
+          ✕ Clear
+        </button>
+      </div>
+      <div
+        ref={ref}
+        className="rte-content"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleChange}
+        onFocus={() => { isFocusedRef.current = true; }}
+        onBlur={() => { isFocusedRef.current = false; handleChange(); }}
+        data-placeholder={placeholder}
+        style={{ minHeight: `${rows * 1.7}em` }}
+      />
+    </div>
+  );
+}

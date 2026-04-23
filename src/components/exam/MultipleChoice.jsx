@@ -1,16 +1,17 @@
 import React from 'react';
 
-const MultipleChoice = ({ data = {}, value, onChange, qNumber }) => {
+const MultipleChoice = ({ data = {}, value, onChange, qNumber, hideQuestionText }) => {
     const { questionText = '', options = [] } = data;
     const visibleOptions = options.filter(Boolean);
 
     return (
         <div className="ielts-official-mcq-block">
-
             <div className="ielts-question-item">
                 <div className="q-num-text-flex">
                     <span className="q-num-square">{qNumber}</span>
-                    <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
+                    {!hideQuestionText && questionText && (
+                        <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
+                    )}
                 </div>
                 <div className="ielts-options-grid">
                     {visibleOptions.map((opt, idx) => {

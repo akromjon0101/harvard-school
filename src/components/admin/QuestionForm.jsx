@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
 import { BASE_URL } from '../../services/api';
+import RichTextEditor from './RichTextEditor';
 
 const QuestionForm = ({ question, onChange, activeModule }) => {
     const [uploading, setUploading] = useState(false);
@@ -67,20 +67,10 @@ const QuestionForm = ({ question, onChange, activeModule }) => {
     };
 
     const insertGap = () => {
-        const textarea = document.getElementById(`q-text-${question.questionNumber}`);
-        if (!textarea) return;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const text = textarea.value;
-        const before = text.substring(0, start);
-        const after = text.substring(end, text.length);
-        const newText = before + '[gap]' + after;
+        const div = document.createElement('div');
+        div.innerHTML = question.questionText || '';
+        const newText = div.innerHTML + ' [gap] ';
         updateField('questionText', newText);
-
-        setTimeout(() => {
-            textarea.focus();
-            textarea.setSelectionRange(start + 5, start + 5);
-        }, 0);
     };
 
     // Auto-init defaults based on activeModule
@@ -145,12 +135,12 @@ const QuestionForm = ({ question, onChange, activeModule }) => {
                         <button onClick={() => setCommonInstruction('ONE WORD AND/OR A NUMBER')}>WORD/NUM</button>
                     </div>
                 </div>
-                <input
-                    type="text"
+                <RichTextEditor
                     className="instruction-input"
                     value={question.instructionText || ''}
-                    onChange={(e) => updateField('instructionText', e.target.value)}
+                    onChange={(val) => updateField('instructionText', val)}
                     placeholder="e.g. ONE WORD ONLY"
+                    rows={2}
                 />
 
                 {/* Optional Per-Question Image */}
@@ -174,12 +164,12 @@ const QuestionForm = ({ question, onChange, activeModule }) => {
                         <button onClick={insertGap} className="btn-gap-helper-alt">+ Insert [gap]</button>
                     )}
                 </div>
-                <textarea
-                    id={`q-text-${question.questionNumber}`}
+                <RichTextEditor
                     className="modern-textarea-q"
                     value={question.questionText || ''}
-                    onChange={(e) => updateField('questionText', e.target.value)}
+                    onChange={(val) => updateField('questionText', val)}
                     placeholder="Enter text here. For Gap Fill, use [gap] tags."
+                    rows={4}
                 />
             </div>
 

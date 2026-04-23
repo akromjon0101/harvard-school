@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
-import { renderHighlightedText, getCaretOffset, stripHtml } from '../utils/highlightUtils'
+import { getCaretOffset, stripHtml } from '../utils/highlightUtils'
+import { applyHighlightsToContainer, wrapRangeTextNodes } from '../utils/safeHighlight'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 
@@ -559,8 +560,7 @@ export default function IELTSExamPage() {
         const selectedText = selection.toString()
         if (selectedText.trim().length < 2) { setSelectionPopup(p => ({ ...p, visible: false })); return }
         const range = selection.getRangeAt(0)
-        const el = instrRefs.current[qi]?.current
-        if (!el || !el.contains(range.commonAncestorContainer)) { setSelectionPopup(p => ({ ...p, visible: false })); return }
+        const el = e.currentTarget  // always the instruction div — no ref needed
         try {
             const startOffset = getCaretOffset(el, range.startContainer, range.startOffset)
             const endOffset   = getCaretOffset(el, range.endContainer,   range.endOffset)
@@ -587,6 +587,7 @@ export default function IELTSExamPage() {
         const key = hlTarget?.type === 'instr'
             ? `instr_${partIndex}_${hlTarget.qi}`
             : highlightKey
+            
         setSectionHighlights(prev => ({
             ...prev,
             [key]: [...(prev[key] || []), { start, end, color }]
@@ -605,6 +606,28 @@ export default function IELTSExamPage() {
             [highlightKey]: (prev[highlightKey] || []).filter((_, i) => i !== idx)
         }))
     }, [highlightKey])
+
+    // Apply recorded highlights to DOM when they change or component re-renders
+    useEffect(() => {
+        if (!passageRef.current || !passageRef.current.innerHTML) return;
+        // First, reset inner content to pristine state because applyHighlights mutates it
+        if (isReading) {
+            passageRef.current.innerHTML = section?.passageContent || 'Passage content not available.';
+        } else if (isListening) {
+            passageRef.current.innerHTML = section?.passageContent || stripHtml(section?.instructions || '');
+        } else if (isWriting) {
+            passageRef.current.innerHTML = section?.passageContent || 'No task description provided.';
+        }
+        
+        applyHighlightsToContainer(passageRef.current, currentHighlights);
+        
+        // Add click listeners to instantiated marks
+        const marks = passageRef.current.querySelectorAll('mark.ip-text-highlight');
+        marks.forEach(m => {
+            m.title = 'Click to remove';
+            m.onclick = handlePassageClick;
+        });
+    }, [currentHighlights, section, isReading, isListening, isWriting, handlePassageClick]);
 
     // ── Part label ────────────────────────────────────────────────────────────
     const getPartLabel = (mod, idx) => {
@@ -832,10 +855,7 @@ export default function IELTSExamPage() {
                                                     ref={passageRef}
                                                     className="ip-context-box ip-highlightable"
                                                     onMouseUp={handlePassageMouseUp}
-                                                    onClick={handlePassageClick}
-                                                >
-                                                    {renderHighlightedText(section.passageContent, currentHighlights)}
-                                                </div>
+                                                />
                                                 {currentHighlights.length > 0 && (
                                                     <button
                                                         className="ip-hl-clear-btn ip-hl-clear-btn--block"
@@ -860,10 +880,7 @@ export default function IELTSExamPage() {
                                                 ref={passageRef}
                                                 className="ip-listening-instr-hl ip-highlightable"
                                                 onMouseUp={handlePassageMouseUp}
-                                                onClick={handlePassageClick}
-                                            >
-                                                {renderHighlightedText(instrPlainText, currentHighlights)}
-                                            </div>
+                                            />
                                         )}
                                         {currentHighlights.length > 0 && (
                                             <button
@@ -906,17 +923,11 @@ export default function IELTSExamPage() {
                                 </div>
                                 <div
                                     ref={passageRef}
-                                    className="ip-passage-text"
+                                    className="ip-passage-text ip-highlightable"
                                     onCopy={e => e.preventDefault()}
                                     onContextMenu={e => e.preventDefault()}
                                     onMouseUp={handlePassageMouseUp}
-                                    onClick={handlePassageClick}
-                                >
-                                    {renderHighlightedText(
-                                        section?.passageContent || 'Passage content not available.',
-                                        currentHighlights
-                                    )}
-                                </div>
+                                />
                             </div>
                             <div className="ip-questions-col">
                                 {renderQuestions()}
@@ -955,12 +966,16 @@ export default function IELTSExamPage() {
                         <div className="ip-writing-split">
                             <div className="ip-task-col">
                                 <h2 className="ip-task-heading">{section?.title}</h2>
-                                <p className="ip-task-instructions">
-                                    {section?.instructions ||
-                                        (sectionIdx === 0
-                                            ? 'Task 1: You should spend about 20 minutes on this task. Write at least 150 words.'
-                                            : 'Task 2: You should spend about 40 minutes on this task. Write at least 250 words.')}
-                                </p>
+                                {(() => {
+                                    const rawInstr = section?.instructions
+                                    const plainInstr = rawInstr ? stripHtml(rawInstr).trim() : ''
+                                    const fallback = sectionIdx === 0
+                                        ? 'Task 1: You should spend about 20 minutes on this task. Write at least 150 words.'
+                                        : 'Task 2: You should spend about 40 minutes on this task. Write at least 250 words.'
+                                    return plainInstr
+                                        ? <div className="ip-task-instructions" dangerouslySetInnerHTML={{ __html: rawInstr }} />
+                                        : <p className="ip-task-instructions">{fallback}</p>
+                                })()}
                                 {section?.media?.filter(m => m.type === 'image').map((img, i) => (
                                     <img key={i} src={img.url} alt="Task visual" className="ip-task-image" />
                                 ))}
@@ -968,10 +983,7 @@ export default function IELTSExamPage() {
                                     ref={passageRef}
                                     className="ip-task-prompt ip-highlightable"
                                     onMouseUp={handlePassageMouseUp}
-                                    onClick={handlePassageClick}
-                                >
-                                    {renderHighlightedText(section?.passageContent || 'No task description provided.', currentHighlights)}
-                                </div>
+                                />
                                 {currentHighlights.length > 0 && (
                                     <button
                                         className="ip-hl-clear-btn ip-hl-clear-btn--block"

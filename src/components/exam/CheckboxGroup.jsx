@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber }) => {
+const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber, hideQuestionText }) => {
     const { questionText = '', options = [] } = data;
     const currentValues = Array.isArray(value) ? value : [];
     const hasRange = endNumber && endNumber !== qNumber;
@@ -19,7 +19,9 @@ const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber }) => {
             <div className="ielts-question-item">
                 <div className="q-num-text-flex">
                     <span className="q-num-square q-num-wide">{qLabel}</span>
-                    <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
+                    {!hideQuestionText && questionText && (
+                        <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
+                    )}
                 </div>
                 <div className="ielts-options-grid">
                     {options.map((opt, idx) => {

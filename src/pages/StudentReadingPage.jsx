@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
+import { wrapRangeTextNodes } from '../utils/safeHighlight'
 import '../styles/student-exam.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
@@ -130,21 +131,16 @@ export default function StudentReadingPage() {
     if (!selection || !selection.rangeCount) return
     const range = selection.getRangeAt(0)
     if (range.collapsed) return
-    try {
-      const span = document.createElement('span')
-      span.className = 'highlight-yellow'
-      span.style.cssText = 'background:#fef08a;cursor:pointer;'
-      span.title = 'Click to remove highlight'
-      span.onclick = (e) => {
-        const parent = e.target.parentNode
-        while (e.target.firstChild) parent.insertBefore(e.target.firstChild, e.target)
-        parent.removeChild(e.target)
-      }
-      range.surroundContents(span)
-      selection.removeAllRanges()
-    } catch {
-      // Ignore — selection across element boundaries
-    }
+    
+    // Smooth popup or just direct highlight (direct yellow for simple fallback)
+    const onRemove = (e) => {
+        const parent = e.target.parentNode;
+        while (e.target.firstChild) parent.insertBefore(e.target.firstChild, e.target);
+        parent.removeChild(e.target);
+    };
+
+    wrapRangeTextNodes(range, 'highlight-yellow', '', onRemove);
+    selection.removeAllRanges();
   }, [])
 
   // ─── Drag-to-resize split pane ───────────────────────────────────────────

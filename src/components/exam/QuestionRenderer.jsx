@@ -23,7 +23,7 @@ const QuestionRenderer = ({
         return [data.optionA, data.optionB, data.optionC, data.optionD, data.optionE].filter(Boolean);
     };
 
-    const renderComponent = () => {
+    const renderComponent = (hideQText = false) => {
         switch (type) {
             case 'gap-fill':
             case 'completion':
@@ -45,6 +45,7 @@ const QuestionRenderer = ({
                         value={value[qNumber]}
                         onChange={(val) => onChange(qNumber, val)}
                         qNumber={qNumber}
+                        hideQuestionText={hideQText}
                     />
                 );
 
@@ -57,6 +58,7 @@ const QuestionRenderer = ({
                         onChange={onChange}
                         startNumber={data.startNumber || qNumber}
                         qNumber={qNumber}
+                        hideQuestionText={hideQText}
                     />
                 );
 
@@ -71,6 +73,7 @@ const QuestionRenderer = ({
                         onChange={(val) => onChange(qNumber, val)}
                         qNumber={qNumber}
                         endNumber={qNumber + 1}
+                        hideQuestionText={hideQText}
                     />
                 );
 
@@ -139,62 +142,58 @@ const QuestionRenderer = ({
         }
     };
 
-    // Render instruction text: supports HTML markup (from rich text editor) and highlights
-    const renderInstruction = () => {
-        if (!data.instructionText || hideInstruction) return null
+    // Types whose questionText should be included in the highlightable text zone
+    // (avoids double-rendering: shown here + hidden inside the component)
+    const QTEXT_IN_ZONE = ['mcq', 'mcq-single', 'mcq-multi', 'mcq-multiple', 'checkbox', 'tfng', 'true-false-notgiven']
+    const showQTextInZone = QTEXT_IN_ZONE.includes(type) && !!data.questionText
+
+    // Render combined instruction + question text as ONE highlightable zone
+    const renderTextZone = () => {
+        const showInstr = !hideInstruction && !!data.instructionText
+        if (!showInstr && !showQTextInZone) return null
 
         const hasHighlights = instrHighlights?.length > 0
-        // When highlights exist, render plain text + marks; otherwise render HTML (supports bold/size)
-        const plainText = stripHtml(data.instructionText)
 
         if (hasHighlights) {
+            // Render plain text with highlight marks; HTML formatting temporarily lost (trade-off)
+            const instrPlain = showInstr ? stripHtml(data.instructionText) : ''
+            const qPlain     = showQTextInZone ? stripHtml(data.questionText) : ''
+            const combined   = instrPlain + qPlain  // no separator — matches DOM textContent
             return (
-                <div
-                    ref={instrRef}
-                    className="ip-content-instructions ip-highlightable"
-                    onMouseUp={onInstrMouseUp}
-                    onClick={onInstrClick}
-                >
-                    {renderHighlightedText(plainText, instrHighlights)}
+                <div className="ip-text-zone ip-highlightable" onMouseUp={onInstrMouseUp} onClick={onInstrClick}>
+                    {renderHighlightedText(combined, instrHighlights)}
                 </div>
             )
         }
 
-        // Check if content has HTML tags (rich text from admin)
-        const hasHtml = /<[^>]+>/.test(data.instructionText)
-        if (hasHtml) {
-            return (
-                <div
-                    ref={instrRef}
-                    className="ip-content-instructions ip-highlightable"
-                    onMouseUp={onInstrMouseUp}
-                    onClick={onInstrClick}
-                    dangerouslySetInnerHTML={{ __html: data.instructionText }}
-                />
-            )
-        }
-
+        // No highlights: render HTML-aware content
+        const instrHtml = showInstr && /<[^>]+>/.test(data.instructionText)
+        const qHtml     = showQTextInZone && /<[^>]+>/.test(data.questionText)
         return (
-            <div
-                ref={instrRef}
-                className="ip-content-instructions ip-highlightable"
-                onMouseUp={onInstrMouseUp}
-                onClick={onInstrClick}
-            >
-                {data.instructionText}
+            <div className="ip-text-zone ip-highlightable" onMouseUp={onInstrMouseUp} onClick={onInstrClick}>
+                {showInstr && (
+                    instrHtml
+                        ? <div className="ip-content-instructions" dangerouslySetInnerHTML={{ __html: data.instructionText }} />
+                        : <div className="ip-content-instructions">{data.instructionText}</div>
+                )}
+                {showQTextInZone && (
+                    qHtml
+                        ? <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: data.questionText }} />
+                        : <p className="q-text-bold">{data.questionText}</p>
+                )}
             </div>
         )
     }
 
     return (
         <div className="ielts-question-block-container">
-            {renderInstruction()}
+            {renderTextZone()}
             {data.image && (
                 <div className="q-block-image-holder" style={{ marginBottom: '20px', textAlign: 'center' }}>
                     <img src={data.image} alt="Task Diagram" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
                 </div>
             )}
-            {renderComponent()}
+            {renderComponent(showQTextInZone)}
         </div>
     );
 };

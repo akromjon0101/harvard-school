@@ -41,33 +41,25 @@ function ProgressDots({ total, current, done }) {
     )
 }
 
-// ── Countdown ring component ──────────────────────────────────────────────────
-function CountdownRing({ seconds, maxSeconds, size = 80 }) {
-    const r = (size - 8) / 2
-    const circ = 2 * Math.PI * r
-    const pct = Math.max(0, seconds / maxSeconds)
-    const dash = circ * pct
-    const isWarning = seconds <= Math.min(10, maxSeconds * 0.2)
-    const isDanger  = seconds <= 5
-
+// ── Linear timer (calm, non-distracting) ─────────────────────────────────────
+function LinearTimer({ seconds, maxSeconds, label = '' }) {
+    const pct   = Math.max(0, (seconds / maxSeconds) * 100)
+    const isWarn   = seconds <= Math.min(15, maxSeconds * 0.25) && seconds > 5
+    const isDanger = seconds <= 5
+    const mins  = Math.floor(seconds / 60)
+    const secs  = String(seconds % 60).padStart(2, '0')
+    const display = maxSeconds >= 60 ? `${mins}:${secs}` : `${seconds}s`
+    const barColor = isDanger ? '#dc2626' : isWarn ? '#f59e0b' : '#1d4ed8'
     return (
-        <div className="sh-countdown-wrap">
-            <svg width={size} height={size} className="sh-countdown-svg" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={6} />
-                <circle
-                    cx={size / 2} cy={size / 2} r={r} fill="none"
-                    stroke={isDanger ? '#dc2626' : isWarning ? '#f59e0b' : '#1d4ed8'}
-                    strokeWidth={6}
-                    strokeDasharray={circ}
-                    strokeDashoffset={circ - dash}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
-                />
-            </svg>
-            <div className={`sh-countdown-val${isDanger ? ' danger' : isWarning ? ' warn' : ''}`}>
-                {seconds}
+        <div className="sh-ltimer">
+            <div className="sh-ltimer-row">
+                {label && <span className="sh-ltimer-label">{label}</span>}
+                <span className={`sh-ltimer-val${isDanger ? ' danger' : isWarn ? ' warn' : ''}`}>{display}</span>
             </div>
-            <div className="sh-countdown-label">sec</div>
+            <div className="sh-ltimer-track">
+                <div className="sh-ltimer-fill"
+                    style={{ width: `${pct}%`, background: barColor, transition: 'width 0.9s linear, background 0.3s' }} />
+            </div>
         </div>
     )
 }
@@ -543,54 +535,54 @@ export default function SpeakingHero({
         }
 
         return (
-            <div className="sh-root">
+            <div className="sh-root sh-root--p2">
                 {isAdmin && <div className="sh-admin-badge">Admin Preview Mode</div>}
-                <AIHero
-                    isSpeakingTTS={isSpeakingTTS}
-                    isLoadingTTS={isLoadingTTS}
-                    sectionTitle={section?.title}
-                    onAvatarClick={() => { if (isSpeakingTTS) { stopTTS(); return }; playTTS(questionText, null) }}
-                    titleHint="Click the examiner to hear the topic"
-                />
 
-                {/* Cue card — always visible */}
-                {section?.passageContent && (
-                    <div className="sh-cuecard">
-                        <div className="sh-cuecard-label">
-                            <Clock size={12} style={{ display: 'inline', marginRight: 4 }} />
-                            Topic Card — Read and make notes
-                        </div>
-                        <div className="sh-cuecard-body">{section.passageContent}</div>
+                {/* ── Compact Part 2 header (replaces full AIHero for less scroll) ── */}
+                <div className="sh-p2-compact-header">
+                    <div className="sh-p2-ch-left">
+                        <span className="sh-ai-live-badge">
+                            <span className="sh-ai-dot" /> AI Examiner
+                        </span>
+                        <span className="sh-ai-part-chip">{section?.title || 'Part 2'}</span>
                     </div>
-                )}
+                    <button
+                        className="sh-p2-play-btn"
+                        onClick={() => { if (isSpeakingTTS) { stopTTS(); return }; playTTS(questionText, null) }}
+                        disabled={isLoadingTTS}
+                    >
+                        <Volume2 size={13} />
+                        {isLoadingTTS ? 'Loading…' : isSpeakingTTS ? 'Stop' : 'Hear topic'}
+                    </button>
+                </div>
 
-                {/* Note card — visible during prep + speaking phases */}
-                {(prepPhase === 'prep' || prepPhase === 'ready' || speakingRecording) && (
-                    <div className="sh-notecard">
-                        <div className="sh-notecard-label">📝 My Notes</div>
+                {/* ── 2-column: topic card + note card (side by side = less scroll) ── */}
+                <div className="sh-p2-cards-row">
+                    {section?.passageContent && (
+                        <div className="sh-cuecard sh-p2-card">
+                            <div className="sh-cuecard-label">
+                                <Clock size={11} style={{ display: 'inline', marginRight: 3 }} />
+                                Topic Card
+                            </div>
+                            <div className="sh-cuecard-body" dangerouslySetInnerHTML={{ __html: section.passageContent }} />
+                        </div>
+                    )}
+                    <div className="sh-notecard sh-p2-card">
+                        <div className="sh-notecard-label">📝 Notes</div>
                         <textarea
                             className="sh-notecard-textarea"
                             value={notes}
                             onChange={e => setNotes(e.target.value)}
-                            placeholder={
-                                prepPhase === 'prep'
-                                    ? 'Write your key points and ideas here during preparation...'
-                                    : 'Refer to your notes while speaking...'
-                            }
+                            placeholder={prepPhase === 'prep' ? 'Jot key points here…' : 'Your notes…'}
                             readOnly={!!blobUrl && !speakingRecording}
                         />
-                        {prepPhase === 'prep' && (
-                            <p className="sh-notecard-hint">
-                                Use this space to jot down bullet points. You can read these while speaking.
-                            </p>
-                        )}
                     </div>
-                )}
+                </div>
 
                 {isAdmin ? (
                     <div className="sh-text-area">
                         <label className="sh-text-label">Type your speaking answer:</label>
-                        <textarea className="sh-text-textarea" rows={7} value={textValue || ''} onChange={e => onTextAnswer?.(e.target.value)} placeholder="Type your answer as if speaking to the examiner." />
+                        <textarea className="sh-text-textarea" rows={5} value={textValue || ''} onChange={e => onTextAnswer?.(e.target.value)} placeholder="Type your answer as if speaking to the examiner." />
                         <div className="sh-text-footer">
                             <span className={`sh-text-wc${wordCount >= 50 ? ' wc-ok' : ''}`}>{wordCount} words</span>
                             {wordCount >= 50 && <span className="sh-text-ready">Ready for AI grading</span>}
@@ -599,87 +591,60 @@ export default function SpeakingHero({
                 ) : (
                     <div className="sh-record-area">
 
-                        {/* ── Phase: Not started ─────────────────────────────────────────────── */}
+                        {/* ── Not started: show timing info + start button ── */}
                         {prepPhase === 'none' && !speakingRecording && !blobUrl && (
-                            <>
-                                <div className="sh-p2-timer-info">
-                                    <div className="sh-p2-timer-block">
-                                        <Clock size={16} />
-                                        <span>1 min</span>
-                                        <span className="sh-p2-timer-sub">Preparation</span>
-                                    </div>
-                                    <div className="sh-p2-timer-arrow">→</div>
-                                    <div className="sh-p2-timer-block">
-                                        <Mic size={16} />
-                                        <span>2 min</span>
-                                        <span className="sh-p2-timer-sub">Speaking</span>
-                                    </div>
+                            <div className="sh-p2-start-block">
+                                <div className="sh-p2-timing-pills">
+                                    <span className="sh-p2-pill"><Clock size={11} /> 1 min prep</span>
+                                    <span className="sh-p2-pill-sep">→</span>
+                                    <span className="sh-p2-pill"><Mic size={11} /> 2 min speak</span>
                                 </div>
                                 <button className="sh-btn-record sh-btn-prep" onClick={startPreparation}>
-                                    <Clock size={18} /> Start Preparation (1 min)
+                                    Start Preparation
                                 </button>
                                 {micError && <p className="sh-mic-err">{micError}</p>}
-                            </>
+                            </div>
                         )}
 
-                        {/* ── Phase: Preparation countdown ──────────────────────────────────── */}
+                        {/* ── Preparation countdown: calm linear bar ── */}
                         {prepPhase === 'prep' && (
-                            <div className="sh-prep-panel">
-                                <div className="sh-prep-header">
-                                    <span className="sh-prep-label">
-                                        <Clock size={15} /> Preparation Time
-                                    </span>
-                                    <CountdownRing seconds={prepCountdown} maxSeconds={PREP_SECONDS} size={80} />
-                                </div>
-                                <p className="sh-prep-hint">
-                                    Read the topic card above and make mental notes. You will speak for 2 minutes.
-                                </p>
-                                <button className="sh-btn-record" onClick={() => {
-                                    clearInterval(countdownRef.current)
-                                    setPrepPhase('ready')
-                                }}>
-                                    Skip Prep → Start Speaking
+                            <div className="sh-p2-prep-bar">
+                                <LinearTimer seconds={prepCountdown} maxSeconds={PREP_SECONDS} label="Preparation" />
+                                <button className="sh-btn-skip" onClick={() => { clearInterval(countdownRef.current); setPrepPhase('ready') }}>
+                                    Skip → Start Speaking
                                 </button>
                             </div>
                         )}
 
-                        {/* ── Phase: Ready to speak ─────────────────────────────────────────── */}
+                        {/* ── Ready to speak ── */}
                         {prepPhase === 'ready' && !speakingRecording && !blobUrl && (
-                            <>
-                                <div className="sh-prep-ready-banner">
-                                    Preparation time is up — you may start speaking now.
-                                </div>
+                            <div className="sh-p2-ready-strip">
+                                <span className="sh-p2-ready-text">✓ Preparation done — start when ready</span>
                                 <button className="sh-btn-record" onClick={startP2Recording}>
-                                    <Mic size={18} /> Start Speaking (2 min)
+                                    <Mic size={16} /> Start Speaking
                                 </button>
                                 {micError && <p className="sh-mic-err">{micError}</p>}
-                            </>
+                            </div>
                         )}
 
-                        {/* ── Recording ─────────────────────────────────────────────────────── */}
+                        {/* ── Recording: compact panel with linear timer ── */}
                         {speakingRecording && (
                             <div className="sh-recording-panel">
                                 <div className="sh-rec-header">
                                     <div className="sh-rec-live">
                                         <span className="sh-rec-dot" />
                                         <span>Recording</span>
-                                        <span className="sh-rec-timer">{fmt(elapsed)}</span>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <CountdownRing seconds={speakCountdown} maxSeconds={SPEAK_SECONDS} size={56} />
-                                        <button className="sh-btn-stop" onClick={stopP2}>
-                                            <Square size={14} /> Stop
-                                        </button>
-                                    </div>
+                                    <button className="sh-btn-stop" onClick={stopP2}>
+                                        <Square size={14} /> Stop
+                                    </button>
                                 </div>
                                 <MicWave levels={micLevels} active={speakingRecording} />
-                                <p className="sh-rec-countdown-label">
-                                    {speakCountdown > 0 ? `${speakCountdown}s remaining` : 'Time up — stopping…'}
-                                </p>
+                                <LinearTimer seconds={speakCountdown} maxSeconds={SPEAK_SECONDS} label="Time remaining" />
                             </div>
                         )}
 
-                        {/* ── Done ──────────────────────────────────────────────────────────── */}
+                        {/* ── Done ── */}
                         {blobUrl && !speakingRecording && (
                             <div className="sh-done-panel">
                                 {uploading && <p className="sh-uploading">Saving answer…</p>}
@@ -834,26 +799,13 @@ export default function SpeakingHero({
                                 <div className="sh-rec-live">
                                     <span className="sh-rec-dot" />
                                     <span>Recording</span>
-                                    <span className="sh-rec-timer">{fmt(qElapsed)}</span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <CountdownRing
-                                        seconds={recordCountdown}
-                                        maxSeconds={MAX_RECORD_SECONDS}
-                                        size={56}
-                                    />
-                                    <button className="sh-btn-stop" onClick={stopRecording}>
-                                        <Square size={14} /> Stop
-                                    </button>
-                                </div>
+                                <button className="sh-btn-stop" onClick={stopRecording}>
+                                    <Square size={14} /> Stop
+                                </button>
                             </div>
                             <MicWave levels={micLevels} active={speakingRecording} />
-                            <p className="sh-rec-countdown-label">
-                                {recordCountdown > 0
-                                    ? `${recordCountdown}s remaining — answer naturally`
-                                    : 'Time up — stopping recording…'
-                                }
-                            </p>
+                            <LinearTimer seconds={recordCountdown} maxSeconds={MAX_RECORD_SECONDS} label="Time remaining" />
                         </div>
                     )}
                     {phase === 'reviewing' && (
