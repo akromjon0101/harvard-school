@@ -156,6 +156,16 @@ export default function IELTSExamPage() {
 
     // TTS state for reading speaking prompts aloud
     const [ttsSpeaking, setTtsSpeaking] = useState(false)
+    const [loadingTimedOut, setLoadingTimedOut] = useState(false)
+
+    // Help user if load takes too long
+    useEffect(() => {
+        if (exam) return
+        const timer = setTimeout(() => {
+            if (!exam) setLoadingTimedOut(true)
+        }, 8000)
+        return () => clearTimeout(timer)
+    }, [exam])
 
     // Speaking recording state (per sectionIdx)
     const speakingRecorderRef = useRef(null)
@@ -632,6 +642,12 @@ export default function IELTSExamPage() {
         <div className="ip-loading">
             <div className="ip-loading-spinner" />
             <p>Loading exam...</p>
+            {loadingTimedOut && (
+                <div style={{ marginTop: 20, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                    Taking a while? The server might be waking up.<br/>
+                    Please wait or <button onClick={() => window.location.reload()} style={{ color: '#2563eb', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}>refresh</button>.
+                </div>
+            )}
         </div>
     )
     if (parts.length === 0) return (
