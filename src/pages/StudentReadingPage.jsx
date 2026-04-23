@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { wrapRangeTextNodes } from '../utils/safeHighlight'
 import '../styles/student-exam.css'
+import '../styles/text-size.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
 
@@ -42,6 +43,9 @@ export default function StudentReadingPage() {
   const [timeLeft, setTimeLeft] = useState(null)
   const timerRef = useRef(null)
 
+  // Text size control for students
+  const [textSize, setTextSize] = useState('normal')
+
   // Confirm-submit modal
   const [showConfirm, setShowConfirm] = useState(false)
 
@@ -65,6 +69,8 @@ export default function StudentReadingPage() {
         if (!res.ok) throw new Error('Failed to load test')
         const data = await res.json()
         setTest(data)
+        // Set default text size from exam
+        setTextSize(data.defaultTextSize || 'normal')
         setTimeLeft((data.duration || 60) * 60)
 
         // Restore saved progress
@@ -257,7 +263,7 @@ export default function StudentReadingPage() {
   // ─── Main exam UI ─────────────────────────────────────────────────────────
 
   return (
-    <div className="ielts-reading-simulation">
+    <div className={`ielts-reading-simulation text-size-${textSize}`}>
 
       {/* ── Top Bar ──────────────────────────────────────────────────────── */}
       <header className="sim-header-dark">
@@ -268,8 +274,34 @@ export default function StudentReadingPage() {
           Time Remaining: <strong>{formatTime(timeLeft)}</strong>
           {saveLabel && <span style={{ marginLeft: '1rem', fontSize: '0.78em', opacity: 0.7 }}>💾 {saveLabel}</span>}
         </div>
-        <div className="header-right">
+        <div className="header-right" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.85em' }}>{answeredQ}/{totalQ} answered</span>
+          
+          {/* Text size selector */}
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b' }}>A</span>
+            {['small', 'normal', 'large'].map(size => (
+              <button
+                key={size}
+                onClick={() => setTextSize(size)}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: '3px',
+                  border: `1.5px solid ${textSize === size ? '#3b82f6' : '#d1d5db'}`,
+                  background: textSize === size ? '#dbeafe' : '#f3f4f6',
+                  color: textSize === size ? '#1e40af' : '#64748b',
+                  fontWeight: textSize === size ? '600' : '500',
+                  fontSize: size === 'small' ? '10px' : size === 'large' ? '12px' : '11px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                title={`${size.charAt(0).toUpperCase() + size.slice(1)} text`}
+              >
+                A
+              </button>
+            ))}
+          </div>
+          
           <button className="btn-help" onClick={() => setShowConfirm(true)}>Finish Test</button>
         </div>
       </header>
