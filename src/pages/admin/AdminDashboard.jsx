@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/admin/AdminLayout'
-
+import OpenAIUsageCard from '../../components/admin/OpenAIUsageCard'
 
 export default function AdminDashboard() {
     const navigate = useNavigate()
@@ -51,7 +51,8 @@ export default function AdminDashboard() {
                 </Link>
             </div>
 
-
+            {/* OpenAI usage card */}
+            <OpenAIUsageCard />
 
             {/* System status */}
             <div className="al-status-row">
