@@ -124,6 +124,50 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
 
         <div className="rte-divider" />
 
+        <div className="rte-divider" />
+
+        {/* Bold first sentence */}
+        <button
+          type="button"
+          className="rte-btn"
+          title="Bold first sentence"
+          onClick={() => {
+            if (!ref.current) return;
+            const text = ref.current.textContent || '';
+            const end = text.search(/[.!?](\s|$)/);
+            if (end < 0) return;
+            const range = document.createRange();
+            const walker = document.createTreeWalker(ref.current, NodeFilter.SHOW_TEXT, null, false);
+            let accumulated = 0;
+            let startNode = null, endNode = null, endOff = 0;
+            let n = walker.nextNode();
+            while (n) {
+              const len = n.nodeValue.length;
+              if (!startNode) { startNode = n; }
+              if (accumulated + len > end) {
+                endNode = n;
+                endOff = end + 1 - accumulated;
+                break;
+              }
+              accumulated += len;
+              n = walker.nextNode();
+            }
+            if (!startNode || !endNode) return;
+            try {
+              range.setStart(startNode, 0);
+              range.setEnd(endNode, endOff);
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+              document.execCommand('bold', false, undefined);
+              sel.removeAllRanges();
+              handleChange();
+            } catch { /* ignore */ }
+          }}
+        >B1</button>
+
+        <div className="rte-divider" />
+
         {/* Clear all formatting */}
         <button
           type="button"

@@ -27,6 +27,7 @@ export function clearHighlightsFromContainer(container) {
  */
 function findNodeAndOffset(container, targetOffset) {
     let accumulated = 0;
+    let lastNode = null;
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
     let node = walker.nextNode();
     while (node) {
@@ -36,10 +37,11 @@ function findNodeAndOffset(container, targetOffset) {
             return { node, offset: targetOffset - accumulated };
         }
         accumulated += len;
+        lastNode = node;
         node = walker.nextNode();
     }
-    // Fallback: clamp to last text node end
-    if (node) return { node, offset: node.nodeValue.length };
+    // Clamp to last text node end (node is always null here, track lastNode instead)
+    if (lastNode) return { node: lastNode, offset: lastNode.nodeValue.length };
     return null;
 }
 

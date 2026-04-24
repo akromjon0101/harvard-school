@@ -1201,12 +1201,7 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
   }, [])
 
   const insertGap = () => {
-    const ta = document.getElementById('tc-q-textarea')
-    if (!ta) return
-    const s = ta.selectionStart, e = ta.selectionEnd
-    const newText = ta.value.substring(0, s) + '[gap]' + ta.value.substring(e)
-    update('questionText', newText)
-    setTimeout(() => { ta.focus(); ta.setSelectionRange(s + 5, s + 5) }, 0)
+    update('questionText', (q.questionText || '') + ' [gap] ')
   }
 
   const presets = {
@@ -1279,13 +1274,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
             <label className="tc-label">Question Text — type [gap] where each blank should appear</label>
             <button className="tc-insert-gap-btn" onClick={insertGap}>+ Insert [gap]</button>
           </div>
-          <textarea
-            id="tc-q-textarea"
-            className="tc-textarea"
-            rows={6}
+          <RichTextEditor
             value={q.questionText || ''}
-            onChange={e => update('questionText', e.target.value)}
-            placeholder={'Name: [gap]\nPhone number: [gap]\nDate of appointment: [gap]\nReason for visit: [gap]'}
+            onChange={val => update('questionText', val)}
+            placeholder="Name: [gap]&#10;Phone number: [gap]&#10;Date of appointment: [gap]"
+            rows={6}
           />
           {gapCount > 0 && (
             <div className="tc-gap-badge">
@@ -1342,12 +1335,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
                 {(q.options || []).map((opt, i) => (
                   <div key={i} className="tc-option-row">
                     <span className="tc-option-letter">{String.fromCharCode(65 + i)}</span>
-                    <input
-                      className="tc-input"
+                    <RichTextEditor
                       value={opt}
-                      onChange={e => { const o = [...q.options]; o[i] = e.target.value; update('options', o) }}
+                      onChange={val => { const o = [...(q.options || [])]; o[i] = val; update('options', o) }}
                       placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); update('options', [...(q.options || []), '']) } }}
+                      rows={1}
                     />
                     <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', padding: '4px 8px', borderRadius: 6, border: `1.5px solid ${(q.correctAnswer || '') === String.fromCharCode(65 + i) ? '#16a34a' : '#e2e8f0'}`, background: (q.correctAnswer || '') === String.fromCharCode(65 + i) ? '#f0fdf4' : 'transparent', color: (q.correctAnswer || '') === String.fromCharCode(65 + i) ? '#16a34a' : '#94a3b8' }}>
                       <input type="radio" name={`mcq-correct-${q.startNumber}`} checked={(q.correctAnswer || '') === String.fromCharCode(65 + i)} onChange={() => update('correctAnswer', String.fromCharCode(65 + i))} style={{ accentColor: '#16a34a' }} />
@@ -1389,12 +1381,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
               {(q.options || []).map((opt, i) => (
                 <div key={i} className="tc-option-row">
                   <span className="tc-option-letter">{String.fromCharCode(65 + i)}</span>
-                  <input
-                    className="tc-input"
+                  <RichTextEditor
                     value={opt}
-                    onChange={e => { const o = [...q.options]; o[i] = e.target.value; update('options', o) }}
+                    onChange={val => { const o = [...(q.options || [])]; o[i] = val; update('options', o) }}
                     placeholder={`Option ${String.fromCharCode(65 + i)}`}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); update('options', [...(q.options || []), '']) } }}
+                    rows={1}
                   />
                   <button
                     className="tc-remove-btn"
@@ -1451,11 +1442,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
                   <span className="tc-option-letter" style={{ fontStyle: 'italic', minWidth: 28 }}>
                     {['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'][i] || i + 1}
                   </span>
-                  <input
-                    className="tc-input"
+                  <RichTextEditor
                     value={h}
-                    onChange={e => { const o = [...q.options]; o[i] = e.target.value; update('options', o) }}
+                    onChange={val => { const o = [...(q.options || [])]; o[i] = val; update('options', o) }}
                     placeholder={`Heading ${i + 1}`}
+                    rows={1}
                   />
                   <button
                     className="tc-remove-btn"
@@ -1642,14 +1633,15 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
       {q.type === 'summary-phrase-bank' && (
         <>
           <div className="tc-field">
-            <label className="tc-label">Summary passage — use [gap] for each blank</label>
-            <textarea
-              id="tc-q-textarea"
-              className="tc-textarea"
-              rows={8}
+            <div className="tc-label-row">
+              <label className="tc-label">Summary passage — use [gap] for each blank</label>
+              <button className="tc-insert-gap-btn" onClick={insertGap}>+ Insert [gap]</button>
+            </div>
+            <RichTextEditor
               value={q.questionText || ''}
-              onChange={e => update('questionText', e.target.value)}
+              onChange={val => update('questionText', val)}
               placeholder="Although people have [gap] to misinformation..."
+              rows={8}
             />
           </div>
           <div className="tc-field">
@@ -1666,14 +1658,14 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
               {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="tc-option-row">
                   <span className="tc-option-letter">{String.fromCharCode(65 + i)}</span>
-                  <input
-                    className="tc-input"
+                  <RichTextEditor
                     value={(q.options || [])[i] || ''}
-                    onChange={e => {
-                      const o = [...(q.options || [])]; while (o.length <= i) o.push(''); o[i] = e.target.value
+                    onChange={val => {
+                      const o = [...(q.options || [])]; while (o.length <= i) o.push(''); o[i] = val
                       update('options', o.slice(0, 10))
                     }}
                     placeholder={`Phrase ${String.fromCharCode(65 + i)}`}
+                    rows={1}
                   />
                 </div>
               ))}
@@ -1740,14 +1732,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
               {(q.options || []).map((opt, i) => (
                 <div key={i} className="tc-option-row">
                   <span className="tc-option-letter">{String.fromCharCode(65 + i)}</span>
-                  <input
-                    className="tc-input"
+                  <RichTextEditor
                     value={opt}
-                    onChange={e => {
-                      const o = [...q.options]; o[i] = e.target.value
-                      update('options', o)
-                    }}
+                    onChange={val => { const o = [...(q.options || [])]; o[i] = val; update('options', o) }}
                     placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                    rows={1}
                   />
                   <button
                     className="tc-remove-btn"
@@ -1839,13 +1828,11 @@ function QuestionForm({ q, onChange, onSave, onSaveAndRepeat, onCancel }) {
               {(q.options || []).map((opt, i) => (
                 <div key={i} className="tc-option-row">
                   <span className="tc-option-letter">{String.fromCharCode(65 + i)}</span>
-                  <input
-                    className="tc-input"
+                  <RichTextEditor
                     value={opt}
-                    onChange={e => {
-                      const o = [...q.options]; o[i] = e.target.value; update('options', o)
-                    }}
+                    onChange={val => { const o = [...(q.options || [])]; o[i] = val; update('options', o) }}
                     placeholder={`Option ${String.fromCharCode(65 + i)}`}
+                    rows={1}
                   />
                   <button
                     className="tc-remove-btn"

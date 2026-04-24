@@ -41,42 +41,16 @@ export function renderHighlightedText(rawText, highlights) {
     return parts
 }
 
-// Accurate caret offset using recursive DOM walk
+// Accurate caret offset using browser-native range serialization.
+// This is the most reliable approach — the browser handles all edge cases
+// including shadow DOM, void elements, and complex nested HTML.
 export function getCaretOffset(container, targetNode, targetOffset) {
-    if (targetNode === container) {
-        let t = 0
-        for (let i = 0; i < targetOffset; i++) {
-            t += container.childNodes[i]?.textContent?.length || 0
-        }
-        return t
+    try {
+        const r = document.createRange()
+        r.setStart(container, 0)
+        r.setEnd(targetNode, targetOffset)
+        return r.toString().length
+    } catch {
+        return 0
     }
-    let total = 0
-    let found = false
-    function walk(node) {
-        if (found) return
-        if (node === targetNode) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                total += targetOffset
-            } else {
-                for (let i = 0; i < targetOffset && i < node.childNodes.length; i++) {
-                    total += node.childNodes[i].textContent.length
-                }
-            }
-            found = true
-            return
-        }
-        if (node.nodeType === Node.TEXT_NODE) {
-            total += node.nodeValue.length
-        } else {
-            for (const child of node.childNodes) {
-                if (found) return
-                walk(child)
-            }
-        }
-    }
-    for (const child of container.childNodes) {
-        if (found) break
-        walk(child)
-    }
-    return total
 }
