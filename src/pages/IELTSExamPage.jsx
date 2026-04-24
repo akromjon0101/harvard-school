@@ -4,7 +4,7 @@ import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
 import { stripHtml, getCaretOffset } from '../utils/highlightUtils'
-import { applyHighlightsToContainer, clearHighlightsFromContainer } from '../utils/safeHighlight'
+import Mark from 'mark.js'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 
@@ -290,17 +290,33 @@ export default function IELTSExamPage() {
     // Key that uniquely identifies the current highlightable section
     const currentSectionKey = `${currentModule}_${sectionIdx ?? 0}`
 
-    // After every render, clear then re-apply stored highlights to the current container.
-    // This guarantees highlights survive section navigation and any React re-render.
+    // After every render, clear then re-apply stored highlights via mark.js.
+    // mark.js markRanges() accepts {start, length} character offsets from textContent,
+    // which matches exactly what getCaretOffset() returns (range.toString().length).
     useLayoutEffect(() => {
         const container = highlightContainerRef.current
         if (!container) return
-        clearHighlightsFromContainer(container)
-        const sectionHighlights = highlights[currentSectionKey] || []
-        if (sectionHighlights.length > 0) {
-            applyHighlightsToContainer(container, sectionHighlights)
-        }
-    // section?.passageContent ensures we re-apply when the content DOM is refreshed
+        const markInstance = new Mark(container)
+        // unmark() removes all <mark> elements cleanly, then the done callback re-applies.
+        markInstance.unmark({
+            done: () => {
+                const sectionHighlights = highlights[currentSectionKey] || []
+                sectionHighlights.forEach((hl, origIdx) => {
+                    markInstance.markRanges(
+                        [{ start: hl.start, length: hl.end - hl.start }],
+                        {
+                            element: 'mark',
+                            className: `ip-text-highlight ip-hl-${hl.color || 'yellow'}`,
+                            each: el => {
+                                el.dataset.hl = String(origIdx)
+                                el.title = 'Click to remove'
+                            }
+                        }
+                    )
+                })
+            }
+        })
+    // section?.passageContent in deps ensures re-apply when DOM is refreshed by dangerouslySetInnerHTML
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentSectionKey, highlights, section?.passageContent])
 
