@@ -994,14 +994,14 @@ export default function IELTSExamPage() {
                                         ? <div className="ip-task-instructions" dangerouslySetInnerHTML={{ __html: rawInstr }} />
                                         : <p className="ip-task-instructions">{fallback}</p>
                                 })()}
-                                {section?.media?.filter(m => m.type === 'image').map((img, i) => (
-                                    <img key={i} src={img.url} alt="Task visual" className="ip-task-image" />
-                                ))}
                                 <div
                                     ref={highlightContainerRef}
                                     className="ip-task-prompt ip-highlightable"
                                     dangerouslySetInnerHTML={{ __html: section?.passageContent || 'No task description provided.' }}
                                 />
+                                {section?.media?.filter(m => m.type === 'image').map((img, i) => (
+                                    <img key={i} src={img.url} alt="Task visual" className="ip-task-image" />
+                                ))}
 
                             </div>
                             <WritingArea
