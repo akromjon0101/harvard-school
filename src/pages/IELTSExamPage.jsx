@@ -256,9 +256,13 @@ export default function IELTSExamPage() {
         }
     }, [partIndex])
 
-    // Hide selection popup on outside click
+    // Hide selection popup on click outside the popup
     useEffect(() => {
-        const hide = () => setSelectionPopup(p => ({ ...p, visible: false }))
+        const hide = (e) => {
+            // Don't hide when clicking inside the popup itself
+            if (e.target.closest('.ip-selection-popup')) return
+            setSelectionPopup(p => ({ ...p, visible: false }))
+        }
         document.addEventListener('mousedown', hide)
         return () => document.removeEventListener('mousedown', hide)
     }, [])
