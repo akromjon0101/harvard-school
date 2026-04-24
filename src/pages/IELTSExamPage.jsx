@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
-import { stripHtml } from '../utils/highlightUtils'
-import { applyHighlightsToContainer, clearHighlightsFromContainer, wrapRangeTextNodes } from '../utils/safeHighlight'
+import { stripHtml, getCaretOffset } from '../utils/highlightUtils'
+import { applyHighlightsToContainer, clearHighlightsFromContainer } from '../utils/safeHighlight'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 
@@ -124,6 +124,7 @@ export default function IELTSExamPage() {
     const navigate = useNavigate()
 
     const [exam, setExam] = useState(null)
+    const [examError, setExamError] = useState(null)
     const [partIndex, setPartIndex] = useState(0)
     // Keys: 'listening_1', 'reading_5', 'writing_0'
     const [answers, setAnswers] = useState({})
@@ -137,9 +138,11 @@ export default function IELTSExamPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
-    // Highlight state
+    // Highlight state — stored in React so highlights survive section navigation
+    const [highlights, setHighlights] = useState({}) // { [sectionKey]: [{start, end, color}] }
     const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0 })
-    const savedRangeRef = useRef(null) // stores the live browser Range until color is chosen
+    const savedRangeRef = useRef(null)            // browser Range saved on mouseup
+    const highlightContainerRef = useRef(null)    // current section's highlightable DOM node
 
     // Speaking session elapsed timer
     const speakingSessionStartRef = useRef(null)
@@ -196,11 +199,12 @@ export default function IELTSExamPage() {
         setTestAudioPlayed(false)
 
         setSelectionPopup({ visible: false, x: 0, y: 0 })
+        setExamError(null)
         setSessionElapsed(0)
         speakingSessionStartRef.current = null
         setShowSubmitConfirm(false)
         setTimeLeft(null)
-        // Restore saved answers/flags for THIS exam
+        // Restore saved answers/flags/highlights for THIS exam
         try {
             const saved = localStorage.getItem(`exam_answers_${id}`)
             setAnswers(saved ? JSON.parse(saved) : {})
@@ -209,14 +213,18 @@ export default function IELTSExamPage() {
             const saved = localStorage.getItem(`exam_flagged_${id}`)
             setFlagged(saved ? JSON.parse(saved) : {})
         } catch { setFlagged({}) }
+        try {
+            const saved = localStorage.getItem(`exam_highlights_${id}`)
+            setHighlights(saved ? JSON.parse(saved) : {})
+        } catch { setHighlights({}) }
         // Fetch exam data
         api(`/exams/${id}`)
             .then(data => {
-                if (data) {
-                    setExam(data)
-                }
+                if (data) setExam(data)
             })
-            .catch(() => navigate('/dashboard'))
+            .catch(err => {
+                setExamError(err.message || 'Failed to load exam')
+            })
     }, [id, navigate])
 
     // ── Auto-save ─────────────────────────────────────────────────────────────
@@ -231,6 +239,12 @@ export default function IELTSExamPage() {
             localStorage.setItem(`exam_flagged_${id}`, JSON.stringify(flagged))
         }
     }, [flagged, id])
+
+    useEffect(() => {
+        if (id) {
+            localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(highlights))
+        }
+    }, [highlights, id])
 
     // Reset audio on part change
     useEffect(() => {
@@ -272,6 +286,23 @@ export default function IELTSExamPage() {
     const isReading = currentModule === 'reading'
     const isWriting = currentModule === 'writing'
     const isSpeaking = currentModule === 'speaking'
+
+    // Key that uniquely identifies the current highlightable section
+    const currentSectionKey = `${currentModule}_${sectionIdx ?? 0}`
+
+    // After every render, clear then re-apply stored highlights to the current container.
+    // This guarantees highlights survive section navigation and any React re-render.
+    useLayoutEffect(() => {
+        const container = highlightContainerRef.current
+        if (!container) return
+        clearHighlightsFromContainer(container)
+        const sectionHighlights = highlights[currentSectionKey] || []
+        if (sectionHighlights.length > 0) {
+            applyHighlightsToContainer(container, sectionHighlights)
+        }
+    // section?.passageContent ensures we re-apply when the content DOM is refreshed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentSectionKey, highlights, section?.passageContent])
 
     // Per-module timer: Reading = 60 min, Writing = 60 min, others = no timer
     useEffect(() => {
@@ -491,6 +522,7 @@ export default function IELTSExamPage() {
             })
             localStorage.removeItem(`exam_answers_${id}`)
             localStorage.removeItem(`exam_flagged_${id}`)
+            localStorage.removeItem(`exam_highlights_${id}`)
             localStorage.removeItem(`exam_timer_reading_${id}`)
             localStorage.removeItem(`exam_timer_writing_${id}`)
             navigate('/my-results')
@@ -548,12 +580,11 @@ export default function IELTSExamPage() {
         if (currentTime >= duration) setIsAudioPlaying(false)
     }
 
-    // ── Highlight helpers (direct DOM mutation — no offset tracking) ──────────
+    // ── Highlight helpers (state-based — survives re-renders and navigation) ────
     const examPaperRef = useRef(null)
 
     const handleGlobalMouseUp = useCallback((e) => {
-        // Don't intercept clicks on existing highlights or interactive elements
-        if (e.target.closest('mark.ip-text-highlight')) return
+        // Ignore clicks/releases on interactive elements; allow ending selection on marks
         if (e.target.closest('input, textarea, button, select, [contenteditable]')) return
 
         const selection = window.getSelection()
@@ -567,12 +598,12 @@ export default function IELTSExamPage() {
             return
         }
         const range = selection.getRangeAt(0)
-        const el = examPaperRef.current
-        if (!el || !el.contains(range.commonAncestorContainer)) {
+        // Must be inside the current highlightable container
+        const container = highlightContainerRef.current
+        if (!container || !container.contains(range.commonAncestorContainer)) {
             setSelectionPopup(p => ({ ...p, visible: false }))
             return
         }
-        // Save the exact browser Range — we'll wrap it when user picks a color
         savedRangeRef.current = range.cloneRange()
         const rect = range.getBoundingClientRect()
         setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: Math.max(70, rect.top) })
@@ -580,31 +611,38 @@ export default function IELTSExamPage() {
 
     const applyHighlight = useCallback((color = 'yellow') => {
         if (!savedRangeRef.current) return
-        const colorClass = `ip-hl-${color}`
-        const removeClickHandler = (e) => {
-            const mark = e.currentTarget
-            const parent = mark.parentNode
-            if (!parent) return
-            while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
-            parent.removeChild(mark)
-            parent.normalize()
-        }
-        wrapRangeTextNodes(savedRangeRef.current, colorClass, Date.now(), removeClickHandler)
+        const container = highlightContainerRef.current
+        if (!container) return
+
+        const range = savedRangeRef.current
+        const start = getCaretOffset(container, range.startContainer, range.startOffset)
+        const end   = getCaretOffset(container, range.endContainer,   range.endOffset)
+        if (start >= end) return
+
+        setHighlights(prev => {
+            const existing = prev[currentSectionKey] || []
+            // Remove any overlapping highlight before adding the new one
+            const filtered = existing.filter(h => h.end <= start || h.start >= end)
+            return { ...prev, [currentSectionKey]: [...filtered, { start, end, color }] }
+        })
+
         savedRangeRef.current = null
         setSelectionPopup(p => ({ ...p, visible: false }))
         window.getSelection()?.removeAllRanges()
-    }, [])
+    }, [currentSectionKey])
 
-    // Click on existing mark → remove it
+    // Click on a mark → remove it from state (useLayoutEffect re-applies remaining)
     const handleMarkClick = useCallback((e) => {
         const mark = e.target.closest('mark.ip-text-highlight')
         if (!mark) return
-        const parent = mark.parentNode
-        if (!parent) return
-        while (mark.firstChild) parent.insertBefore(mark.firstChild, mark)
-        parent.removeChild(mark)
-        parent.normalize()
-    }, [])
+        const hlIdx = parseInt(mark.dataset.hl)
+        if (isNaN(hlIdx)) return
+        setHighlights(prev => {
+            const existing = prev[currentSectionKey] || []
+            return { ...prev, [currentSectionKey]: existing.filter((_, i) => i !== hlIdx) }
+        })
+        e.stopPropagation()
+    }, [currentSectionKey])
 
     // ── Part label ────────────────────────────────────────────────────────────
     const getPartLabel = (mod, idx) => {
@@ -637,21 +675,43 @@ export default function IELTSExamPage() {
         });
     }, [section, moduleAnswers, currentModule, handleAnswerChange, flagged, toggleFlag])
 
-    // ── Loading / empty states ────────────────────────────────────────────────
+    // ── Loading / error / empty states ───────────────────────────────────────
+    if (examError) return (
+        <div className="ip-loading">
+            <div style={{ textAlign: 'center', color: '#dc2626', fontSize: 15, marginBottom: 16 }}>
+                ⚠ {examError}
+            </div>
+            <button
+                onClick={() => { setExamError(null); window.location.reload() }}
+                style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            >
+                Retry
+            </button>
+            <button
+                onClick={() => navigate('/dashboard')}
+                style={{ background: 'none', color: '#64748b', border: 'none', marginTop: 10, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+                Back to Dashboard
+            </button>
+        </div>
+    )
     if (!exam) return (
         <div className="ip-loading">
             <div className="ip-loading-spinner" />
             <p>Loading exam...</p>
             {loadingTimedOut && (
                 <div style={{ marginTop: 20, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                    Taking a while? The server might be waking up.<br/>
+                    Taking a while? The server might be waking up.<br />
                     Please wait or <button onClick={() => window.location.reload()} style={{ color: '#2563eb', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}>refresh</button>.
                 </div>
             )}
         </div>
     )
     if (parts.length === 0) return (
-        <div className="ip-loading"><p>This exam has no content yet.</p></div>
+        <div className="ip-loading">
+            <p>This exam has no content yet.</p>
+            <button onClick={() => navigate('/dashboard')} style={{ marginTop: 16, background: 'none', color: '#2563eb', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>← Back to Dashboard</button>
+        </div>
     )
 
     const partLabel = getPartLabel(currentModule, sectionIdx)
@@ -830,6 +890,7 @@ export default function IELTSExamPage() {
                                                 )}
                                                 {/* 3. Passage (highlightable) */}
                                                 <div
+                                                    ref={highlightContainerRef}
                                                     className="ip-context-box ip-highlightable"
                                                     dangerouslySetInnerHTML={{ __html: section.passageContent || 'No content' }}
                                                 />
@@ -847,6 +908,7 @@ export default function IELTSExamPage() {
                                         {/* 1. Instructions as highlightable text — student can mark key words */}
                                         {instrPlainText && (
                                             <div
+                                                ref={highlightContainerRef}
                                                 className="ip-listening-instr-hl ip-highlightable"
                                                 dangerouslySetInnerHTML={{ __html: instrPlainText || 'No content' }}
                                             />
@@ -877,6 +939,7 @@ export default function IELTSExamPage() {
 
                                 </div>
                                 <div
+                                    ref={highlightContainerRef}
                                     className="ip-passage-text ip-highlightable"
                                     onCopy={e => e.preventDefault()}
                                     onContextMenu={e => e.preventDefault()}
@@ -935,6 +998,7 @@ export default function IELTSExamPage() {
                                     <img key={i} src={img.url} alt="Task visual" className="ip-task-image" />
                                 ))}
                                 <div
+                                    ref={highlightContainerRef}
                                     className="ip-task-prompt ip-highlightable"
                                     dangerouslySetInnerHTML={{ __html: section?.passageContent || 'No task description provided.' }}
                                 />

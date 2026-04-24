@@ -109,15 +109,18 @@ export function wrapRangeTextNodes(range, colorClass = 'ip-hl-yellow', dataHlId 
 /**
  * Apply an array of { start, end, color } highlight descriptors to `container`.
  * Must be called AFTER clearHighlightsFromContainer so offsets match raw text.
+ * The data-hl attribute on each <mark> stores the ORIGINAL array index so that
+ * click-to-remove can identify the correct entry in the highlights array.
  */
 export function applyHighlightsToContainer(container, highlights) {
     if (!container || !highlights?.length) return;
 
-    // Apply front-to-back. After each highlight we re-walk (safe because we
-    // normalized first), so there is no offset-drift between highlights.
-    const sorted = [...highlights].sort((a, b) => a.start - b.start);
+    // Preserve original indices before sorting, so data-hl reflects the array index.
+    const sorted = highlights
+        .map((hl, origIdx) => ({ ...hl, origIdx }))
+        .sort((a, b) => a.start - b.start);
 
-    sorted.forEach((hl, idx) => {
+    sorted.forEach(hl => {
         const colorClass = hl.color ? `ip-hl-${hl.color}` : 'ip-hl-yellow';
         const startObj = findNodeAndOffset(container, hl.start);
         const endObj   = findNodeAndOffset(container, hl.end);
@@ -128,7 +131,7 @@ export function applyHighlightsToContainer(container, highlights) {
             range.setStart(startObj.node, startObj.offset);
             range.setEnd(endObj.node, endObj.offset);
             if (!range.collapsed) {
-                wrapRangeTextNodes(range, colorClass, hl.origIdx ?? idx);
+                wrapRangeTextNodes(range, colorClass, hl.origIdx);
             }
         } catch {
             // Skip any range that the browser rejects (e.g. stale nodes)

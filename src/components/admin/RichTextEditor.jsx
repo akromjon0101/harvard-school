@@ -102,13 +102,11 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
           title="Increase font size"
           onClick={() => {
             restoreSelection();
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-              const el = sel.getRangeAt(0).startContainer.parentElement;
-              const curSize = parseInt(el?.dataset?.fontSize || el?.style?.fontSize || '3');
-              const next = Math.min(7, (curSize || 3) + 1);
-              exec('fontSize', String(next));
-            }
+            // execCommand('fontSize') wraps in <font size="N">, so read from that element
+            const fontEl = window.getSelection()?.getRangeAt(0)
+              ?.startContainer?.parentElement?.closest('font');
+            const curSize = fontEl ? (parseInt(fontEl.getAttribute('size')) || 3) : 3;
+            exec('fontSize', String(Math.min(7, curSize + 1)));
           }}
         >A+</button>
         <button
@@ -117,13 +115,10 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
           title="Decrease font size"
           onClick={() => {
             restoreSelection();
-            const sel = window.getSelection();
-            if (sel && sel.rangeCount > 0) {
-              const el = sel.getRangeAt(0).startContainer.parentElement;
-              const curSize = parseInt(el?.dataset?.fontSize || el?.style?.fontSize || '3');
-              const prev = Math.max(1, (curSize || 3) - 1);
-              exec('fontSize', String(prev));
-            }
+            const fontEl = window.getSelection()?.getRangeAt(0)
+              ?.startContainer?.parentElement?.closest('font');
+            const curSize = fontEl ? (parseInt(fontEl.getAttribute('size')) || 3) : 3;
+            exec('fontSize', String(Math.max(1, curSize - 1)));
           }}
         >A-</button>
 

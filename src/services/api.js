@@ -21,13 +21,13 @@ export const api = async (endpoint, method = 'GET', body) => {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
      if ((res.status === 401 || res.status === 403) && !endpoint.includes('login')) {
-         alert('⚠️ Session expired. Please log in again.');
          localStorage.removeItem('user');
          localStorage.removeItem('token');
-         window.location.href = '/login';
+         // Use replace so the login page doesn't stack in history
+         window.location.replace('/login');
          throw new Error('Session expired');
      }
-     throw new Error(data.error || 'API error')
+     throw new Error(data.error || `Request failed (${res.status})`)
   }
   return data
 }
