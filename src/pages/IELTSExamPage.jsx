@@ -349,7 +349,8 @@ export default function IELTSExamPage() {
                 })
             },
         })
-    }) // no deps — runs after every render; early-exit when no highlights makes timer ticks free
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentSectionKey, highlights])
 
     // Per-module timer: Reading = 60 min, Writing = 60 min, others = no timer
     useEffect(() => {

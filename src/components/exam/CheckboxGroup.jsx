@@ -1,10 +1,23 @@
-import React from 'react';
+import { useRef, useLayoutEffect } from 'react';
 
 const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber, hideQuestionText }) => {
     const { questionText = '', options = [] } = data;
     const currentValues = Array.isArray(value) ? value : [];
     const hasRange = endNumber && endNumber !== qNumber;
     const qLabel = hasRange ? `${qNumber}-${endNumber}` : String(qNumber);
+    const qTextRef = useRef(null);
+    const optRefsRef = useRef([]);
+
+    useLayoutEffect(() => {
+        if (qTextRef.current) qTextRef.current.innerHTML = questionText;
+    }, [questionText]);
+
+    useLayoutEffect(() => {
+        optRefsRef.current.forEach((el, i) => {
+            if (el) el.innerHTML = options[i] ?? '';
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // options are static exam data — set once on mount
 
     const toggleOption = (letter) => {
         if (currentValues.includes(letter)) {
@@ -20,7 +33,7 @@ const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber, hideQue
                 <div className="q-num-text-flex">
                     <span className="q-num-square q-num-wide">{qLabel}</span>
                     {!hideQuestionText && questionText && (
-                        <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
+                        <p ref={qTextRef} className="q-text-bold ip-highlightable" />
                     )}
                 </div>
                 <div className="ielts-options-grid">
@@ -34,7 +47,10 @@ const CheckboxGroup = ({ data = {}, value, onChange, qNumber, endNumber, hideQue
                                 onClick={() => toggleOption(letter)}
                             >
                                 <span className="opt-circle opt-square">{letter}</span>
-                                <span className="opt-label-text" dangerouslySetInnerHTML={{ __html: opt }} />
+                                <span
+                                    ref={el => { optRefsRef.current[idx] = el; }}
+                                    className="opt-label-text ip-highlightable"
+                                />
                             </div>
                         );
                     })}

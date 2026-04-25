@@ -1,4 +1,4 @@
-import React from 'react';
+import { useRef, useLayoutEffect } from 'react';
 import GapFill from './GapFill';
 import MultipleChoice from './MultipleChoice';
 import CheckboxGroup from './CheckboxGroup';
@@ -14,11 +14,31 @@ const QuestionRenderer = ({
     type, data, value, onChange, qNumber, hideInstruction, modifiedHtml,
 }) => {
 
-    // Shared formatting for MCQ/Matching
     const getOptions = () => {
         if (data.options && data.options.length > 0) return data.options;
         return [data.optionA, data.optionB, data.optionC, data.optionD, data.optionE].filter(Boolean);
     };
+
+    // Types whose questionText is shown in the text zone (not inside the component)
+    const QTEXT_IN_ZONE = ['mcq', 'mcq-single', 'mcq-multi', 'mcq-multiple', 'checkbox', 'tfng', 'true-false-notgiven'];
+    const showQTextInZone = QTEXT_IN_ZONE.includes(type) && !!data.questionText;
+    const showInstr = !hideInstruction && !!data.instructionText;
+    const hasTextZone = !!(modifiedHtml || showInstr || showQTextInZone);
+
+    // Text zone ref — innerHTML set imperatively so mark.js marks survive React re-renders
+    const textZoneRef = useRef(null);
+    useLayoutEffect(() => {
+        if (!textZoneRef.current) return;
+        if (modifiedHtml) {
+            textZoneRef.current.innerHTML = modifiedHtml;
+            return;
+        }
+        let html = '';
+        if (showInstr)       html += `<div class="ip-content-instructions">${data.instructionText}</div>`;
+        if (showQTextInZone) html += `<p class="q-text-bold">${data.questionText}</p>`;
+        textZoneRef.current.innerHTML = html;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // instruction/question text is static exam data — set once on mount
 
     const renderComponent = (hideQText = false) => {
         switch (type) {
@@ -139,37 +159,11 @@ const QuestionRenderer = ({
         }
     };
 
-    // Types whose questionText should be included in the text zone
-    // (avoids double-rendering: shown here + hidden inside the component)
-    const QTEXT_IN_ZONE = ['mcq', 'mcq-single', 'mcq-multi', 'mcq-multiple', 'checkbox', 'tfng', 'true-false-notgiven']
-    const showQTextInZone = QTEXT_IN_ZONE.includes(type) && !!data.questionText
-
-    // Render instruction + question text as highlightable zone
-    const renderTextZone = () => {
-        const showInstr = !hideInstruction && !!data.instructionText
-        if (!showInstr && !showQTextInZone && !modifiedHtml) return null
-
-        if (modifiedHtml) {
-            return (
-                <div className="ip-text-zone ip-highlightable" dangerouslySetInnerHTML={{ __html: modifiedHtml }} />
-            )
-        }
-
-        return (
-            <div className="ip-text-zone ip-highlightable">
-                {showInstr && (
-                    <div className="ip-content-instructions" dangerouslySetInnerHTML={{ __html: data.instructionText }} />
-                )}
-                {showQTextInZone && (
-                     <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: data.questionText }} />
-                )}
-            </div>
-        )
-    }
-
     return (
         <div className="ielts-question-block-container ip-highlightable">
-            {renderTextZone()}
+            {hasTextZone && (
+                <div ref={textZoneRef} className="ip-text-zone ip-highlightable" />
+            )}
             {data.image && (
                 <div className="q-block-image-holder" style={{ marginBottom: '20px', textAlign: 'center' }}>
                     <img src={data.image} alt="Task Diagram" style={{ maxWidth: '100%', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
