@@ -296,10 +296,6 @@ export default function IELTSExamPage() {
     // Key that uniquely identifies the current highlightable section
     const currentSectionKey = `${currentModule}_${sectionIdx ?? 0}`
 
-    // After every render, clear then re-apply stored highlights via mark.js.
-    // mark.js markRanges() accepts {start, length} character offsets from textContent,
-    // which matches exactly what getCaretOffset() returns (range.toString().length).
-    // ── Highlight Synchronization ───────────────────────────────────────────
     // This effect ensures the DOM (mark.js) is always in sync with the highlights state.
     useLayoutEffect(() => {
         const container = highlightContainerRef.current;
@@ -309,7 +305,13 @@ export default function IELTSExamPage() {
         container.style.userSelect = "text";
         container.style.webkitUserSelect = "text";
 
-        const markInstance = new Mark(container);
+        // Handle both ES modules and CommonJS imports of mark.js
+        const MarkConstructor = typeof Mark === 'function' ? Mark : Mark.default;
+        if (!MarkConstructor) {
+            console.error('Mark.js could not be loaded. Please ensure "mark.js" is installed.');
+            return;
+        }
+        const markInstance = new MarkConstructor(container);
         
         // Step 1: Clean the DOM synchronously.
         markInstance.unmark();
@@ -682,7 +684,11 @@ export default function IELTSExamPage() {
         })
         savedOffsetsRef.current = null
         setSelectionPopup(p => ({ ...p, visible: false }))
-        window.getSelection()?.removeAllRanges()
+        if (window.getSelection) {
+            const sel = window.getSelection();
+            if (sel.empty) sel.empty();
+            else if (sel.removeAllRanges) sel.removeAllRanges();
+        }
     }, [currentSectionKey])
 
     // Remove any highlights that overlap the current selection without adding a new color
@@ -695,7 +701,11 @@ export default function IELTSExamPage() {
         })
         savedOffsetsRef.current = null
         setSelectionPopup(p => ({ ...p, visible: false }))
-        window.getSelection()?.removeAllRanges()
+        if (window.getSelection) {
+            const sel = window.getSelection();
+            if (sel.empty) sel.empty();
+            else if (sel.removeAllRanges) sel.removeAllRanges();
+        }
     }, [currentSectionKey])
 
     // Click on a mark → remove it from state (useLayoutEffect re-applies remaining)

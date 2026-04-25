@@ -28,16 +28,27 @@ export function stripHtml(html) {
  */
 export function getCaretOffset(container, node, offset) {
   let charCount = 0;
+  let target = node;
+
+  // If node is an element, target the specific child or the element itself
+  if (node.nodeType !== Node.TEXT_NODE) {
+    if (node.childNodes && node.childNodes.length > 0 && offset < node.childNodes.length) {
+      target = node.childNodes[offset];
+      offset = 0;
+    }
+  }
+
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-  
   while (walker.nextNode()) {
     const textNode = walker.currentNode;
-    if (textNode === node) {
+    if (textNode === target) {
       charCount += offset;
-      break;
+      return charCount;
     }
     charCount += textNode.textContent.length;
   }
+  
+  // Fallback: search for the node using compareDocumentPosition if nextNode missed it
   return charCount;
 }
 
