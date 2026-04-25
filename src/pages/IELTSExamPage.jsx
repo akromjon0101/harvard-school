@@ -4,7 +4,6 @@ import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
 import { stripHtml, getRangeOffsets } from '../utils/highlightUtils'
-import Mark from 'mark.js'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 import '../styles/highlight.css';
@@ -296,41 +295,64 @@ export default function IELTSExamPage() {
     // Key that uniquely identifies the current highlightable section
     const currentSectionKey = `${currentModule}_${sectionIdx ?? 0}`
 
-    // This effect ensures the DOM (mark.js) is always in sync with the highlights state.
+    // ── Native Highlight Synchronization ──────────────────────────────────
+    // This effect re-applies stored highlights from state to the DOM on every render/load.
     useLayoutEffect(() => {
         const container = highlightContainerRef.current;
         if (!container) return;
 
-        // Ensure user-select is enabled for highlighting
-        container.style.userSelect = "text";
-        container.style.webkitUserSelect = "text";
+        // Clean previous spans that were added manually (or by previous render)
+        // Note: we target spans with our specific data attribute
+        const existing = container.querySelectorAll('span[data-mock-hl]');
+        existing.forEach(el => {
+            const parent = el.parentNode;
+            while (el.firstChild) parent.insertBefore(el.firstChild, el);
+            parent.removeChild(el);
+            parent.normalize(); // Merge text nodes back
+        });
 
-        const MarkConstructor = (typeof Mark === 'function') ? Mark : (Mark?.default || Mark);
-        if (!MarkConstructor || typeof MarkConstructor !== 'function') {
-            console.error('Mark.js initialization failed: Constructor not found');
-            return;
-        }
-        const markInstance = new MarkConstructor(container);
-        
-        // Step 1: Clean the DOM synchronously.
-        markInstance.unmark();
-
-        // Step 2: Apply all highlights from state.
         const sectionHighlights = highlights[currentSectionKey] || [];
         if (sectionHighlights.length === 0) return;
 
-        sectionHighlights.forEach((hl, i) => {
-            markInstance.markRanges(
-                [{ start: hl.start, length: hl.end - hl.start }],
-                {
-                    element: 'mark',
-                    className: `ip-text-highlight ip-hl-${hl.color || 'yellow'}`,
-                    each: el => {
-                        el.dataset.hl = String(i);
-                        el.title = 'Click to remove highlight';
+        // Apply each highlight from state using a native approach
+        sectionHighlights.forEach(hl => {
+            try {
+                const range = document.createRange();
+                let startNode = null, endNode = null;
+                let startOffset = 0, endOffset = 0;
+                let charCount = 0;
+
+                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+                while (walker.nextNode()) {
+                    const node = walker.currentNode;
+                    const nextCount = charCount + node.textContent.length;
+                    
+                    if (!startNode && hl.start >= charCount && hl.start < nextCount) {
+                        startNode = node;
+                        startOffset = hl.start - charCount;
                     }
+                    if (!endNode && hl.end > charCount && hl.end <= nextCount) {
+                        endNode = node;
+                        endOffset = hl.end - charCount;
+                    }
+                    if (startNode && endNode) break;
+                    charCount = nextCount;
                 }
-            );
+
+                if (startNode && endNode) {
+                    range.setStart(startNode, startOffset);
+                    range.setEnd(endNode, endOffset);
+                    const span = document.createElement("span");
+                    span.className = `ip-text-highlight ip-hl-${hl.color || 'yellow'}`;
+                    span.dataset.mockHl = "true";
+                    span.dataset.start = String(hl.start);
+                    span.dataset.end = String(hl.end);
+                    span.title = 'Click to remove';
+                    range.surroundContents(span);
+                }
+            } catch (err) {
+                console.warn("Failed to re-apply highlight:", err);
+            }
         });
     }, [currentSectionKey, highlights, (section?.passageContent || '')]);
 
@@ -680,22 +702,54 @@ export default function IELTSExamPage() {
     }, []);
 
     const applyHighlight = useCallback((color = 'yellow') => {
-        if (!savedOffsetsRef.current) return
-        const { start, end, text } = savedOffsetsRef.current
-        setHighlights(prev => {
-            const existing = prev[currentSectionKey] || []
-            // Remove any overlapping highlight before adding the new one
-            const filtered = existing.filter(h => h.end <= start || h.start >= end)
-            return { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] }
-        })
-        savedOffsetsRef.current = null
-        setSelectionPopup(p => ({ ...p, visible: false }))
+        const selection = window.getSelection();
+        if (!selection.rangeCount || !savedOffsetsRef.current) return;
+
+        const { start, end, text } = savedOffsetsRef.current;
+        const range = selection.getRangeAt(0);
+
+        // 1. Immediate Visual Feedback (Direct DOM manipulation as requested)
+        const span = document.createElement("span");
+        span.className = `ip-text-highlight ip-hl-${color}`;
+        span.dataset.mockHl = "true";
+        span.dataset.start = String(start);
+        span.dataset.end = String(end);
+        span.title = 'Click to remove';
+
+        try {
+            range.surroundContents(span);
+            
+            // 2. Sync to State for persistence
+            setHighlights(prev => {
+                const existing = prev[currentSectionKey] || [];
+                const filtered = existing.filter(h => h.end <= start || h.start >= end);
+                const updated = { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] };
+                
+                // Save to localStorage immediately
+                localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
+                return updated;
+            });
+        } catch (e) {
+            console.warn("Complex selection detected. Falling back to state-driven only render.");
+            // If surroundContents fails (e.g. crossing tags), we still save to state
+            // and our useLayoutEffect walker will handle the complex wrapping on next render.
+            setHighlights(prev => {
+                const existing = prev[currentSectionKey] || [];
+                const filtered = existing.filter(h => h.end <= start || h.start >= end);
+                const updated = { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] };
+                localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
+                return updated;
+            });
+        }
+
+        savedOffsetsRef.current = null;
+        setSelectionPopup(p => ({ ...p, visible: false }));
         if (window.getSelection) {
             const sel = window.getSelection();
             if (sel.empty) sel.empty();
             else if (sel.removeAllRanges) sel.removeAllRanges();
         }
-    }, [currentSectionKey])
+    }, [currentSectionKey, id]);
 
     // Remove any highlights that overlap the current selection without adding a new color
     const eraseHighlight = useCallback(() => {
@@ -714,18 +768,32 @@ export default function IELTSExamPage() {
         }
     }, [currentSectionKey])
 
-    // Click on a mark → remove it from state (useLayoutEffect re-applies remaining)
-    const handleMarkClick = useCallback((e) => {
-        const mark = e.target.closest('mark.ip-text-highlight')
-        if (!mark) return
-        const hlIdx = parseInt(mark.dataset.hl)
-        if (isNaN(hlIdx)) return
+    // Click on a highlight span → remove it from state
+    const handleHighlightClick = useCallback((e) => {
+        const span = e.target.closest('span[data-mock-hl]')
+        if (!span) return
+        
+        const start = parseInt(span.dataset.start)
+        const end = parseInt(span.dataset.end)
+        
+        if (isNaN(start) || isNaN(end)) return
+
         setHighlights(prev => {
             const existing = prev[currentSectionKey] || []
-            return { ...prev, [currentSectionKey]: existing.filter((_, i) => i !== hlIdx) }
+            const updated = { ...prev, [currentSectionKey]: existing.filter(h => h.start !== start || h.end !== end) }
+            localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
+            return updated;
         })
         e.stopPropagation()
-    }, [currentSectionKey])
+    }, [currentSectionKey, id])
+
+    // Global click listener for highlight removal
+    useEffect(() => {
+        const container = highlightContainerRef.current;
+        if (!container) return;
+        container.addEventListener('click', handleHighlightClick);
+        return () => container.removeEventListener('click', handleHighlightClick);
+    }, [currentSectionKey, handleHighlightClick]);
 
     // ── Part label ────────────────────────────────────────────────────────────
     const getPartLabel = (mod, idx) => {
