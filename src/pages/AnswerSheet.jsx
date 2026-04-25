@@ -775,10 +775,6 @@ function QuestionBlock({ q, rows }) {
                 </span>
             </div>
 
-            {q.questionText && q.type !== 'mcq' && q.type !== 'tfng' && (
-                <div className="as-q-text" dangerouslySetInnerHTML={{ __html: q.questionText }} />
-            )}
-
             <div className="as-answer-rows">
                 {rows.map((row, ri) => (
                     <div key={ri} className={`as-answer-row ${row.isCorrect ? 'correct' : 'wrong'}`}>
