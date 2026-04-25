@@ -2055,7 +2055,7 @@
 /* ── Floating selection popup ─────────────────────────────────────── */
 .ip-selection-popup {
   position: fixed;
-  transform: translate(-50%, calc(-100% - 12px));
+  transform: translateX(-50%); /* Handle horizontal centering only */
   background: #18181b;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
@@ -2071,11 +2071,29 @@
 .ip-selection-popup::after {
   content: '';
   position: absolute;
-  top: 100%;
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
+}
+
+/* Default state: Arrow at bottom, pointing down (popup is above selection) */
+.ip-selection-popup--above {
+  margin-top: -12px;
+  transform: translate(-50%, -100%);
+}
+.ip-selection-popup--above::after {
+  top: 100%;
   border-top-color: #18181b;
+}
+
+/* Alternative state: Arrow at top, pointing up (popup is below selection) */
+.ip-selection-popup--below {
+  margin-top: 12px;
+  transform: translateX(-50%);
+}
+.ip-selection-popup--below::after {
+  bottom: 100%;
+  border-bottom-color: #18181b;
 }
 
 /* Label */

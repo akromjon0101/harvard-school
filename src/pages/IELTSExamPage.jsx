@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
-import { stripHtml, getCaretOffset } from '../utils/highlightUtils'
+import { stripHtml, getRangeOffsets } from '../utils/highlightUtils'
 import Mark from 'mark.js'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
@@ -141,7 +141,7 @@ export default function IELTSExamPage() {
 
     // Highlight state — stored in React so highlights survive section navigation
     const [highlights, setHighlights] = useState({}) // { [sectionKey]: [{start, end, color, text}] }
-    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0 })
+    const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0, position: 'above' })
     // Store pre-computed character offsets (NOT a DOM Range — Ranges are invalidated by mark.js unmark())
     const savedOffsetsRef = useRef(null)          // { start, end, text } computed eagerly on mouseup
     const highlightContainerRef = useRef(null)    // current section's highlightable DOM node
@@ -305,10 +305,9 @@ export default function IELTSExamPage() {
         container.style.userSelect = "text";
         container.style.webkitUserSelect = "text";
 
-        // Handle both ES modules and CommonJS imports of mark.js
-        const MarkConstructor = typeof Mark === 'function' ? Mark : Mark.default;
-        if (!MarkConstructor) {
-            console.error('Mark.js could not be loaded. Please ensure "mark.js" is installed.');
+        const MarkConstructor = (typeof Mark === 'function') ? Mark : (Mark?.default || Mark);
+        if (!MarkConstructor || typeof MarkConstructor !== 'function') {
+            console.error('Mark.js initialization failed: Constructor not found');
             return;
         }
         const markInstance = new MarkConstructor(container);
@@ -642,31 +641,38 @@ export default function IELTSExamPage() {
         const range = selection.getRangeAt(0);
         const container = highlightContainerRef.current;
 
-        // 2. Safety check: ensure selection is within the highlightable container
-        if (!container || !container.contains(range.commonAncestorContainer)) {
+        // 2. Safety check: ensure selection ends are within the highlightable container
+        // We use .contains on start/end specifically to be more forgiving than commonAncestorContainer
+        if (!container || (!container.contains(range.startContainer) && !container.contains(range.endContainer))) {
             setSelectionPopup(p => ({ ...p, visible: false }));
             return;
         }
 
         // 3. Robust Offset Calculation: compute character offsets relative to container
-        // This is done BEFORE re-render to ensure accuracy.
         try {
-            const start = getCaretOffset(container, range.startContainer, range.startOffset);
-            const end = getCaretOffset(container, range.endContainer, range.endOffset);
+            const { start, end } = getRangeOffsets(container, range);
 
-            if (start >= end) {
+            if (start === end) {
                 setSelectionPopup(p => ({ ...p, visible: false }));
                 return;
             }
 
             savedOffsetsRef.current = { start, end, text: selectedText };
 
-            // 4. Position the popup above the selection
+            // 4. Position the popup above or below the selection
             const rect = range.getBoundingClientRect();
             const popupX = Math.min(Math.max(rect.left + rect.width / 2, 110), window.innerWidth - 110);
-            const popupY = rect.top < 120 ? rect.bottom + 12 : rect.top;
             
-            setSelectionPopup({ visible: true, x: popupX, y: popupY });
+            // If near top (less than 130px from top of viewport), show popup BELOW the selection
+            const showBelow = rect.top < 130;
+            const popupY = showBelow ? rect.bottom : rect.top;
+            
+            setSelectionPopup({ 
+                visible: true, 
+                x: popupX, 
+                y: popupY, 
+                position: showBelow ? 'below' : 'above' 
+            });
         } catch (err) {
             console.warn('Highlight selection failed:', err);
             setSelectionPopup(p => ({ ...p, visible: false }));
@@ -1187,7 +1193,7 @@ export default function IELTSExamPage() {
             {/* ── HIGHLIGHT POPUP ── */}
             {selectionPopup.visible && (
                 <div
-                    className="ip-selection-popup"
+                    className={`ip-selection-popup ip-selection-popup--${selectionPopup.position}`}
                     style={{ left: selectionPopup.x, top: selectionPopup.y }}
                     onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
                 >
