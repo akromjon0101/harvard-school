@@ -5,14 +5,23 @@ import { api } from '../services/api'
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function norm(v) {
-    if (v == null) return null
+    if (v == null || v === '') return null
     if (Array.isArray(v)) return v.map(x => String(x).trim().toLowerCase()).filter(Boolean).sort().join(', ')
     return String(v).trim()
 }
 
-function normLower(v) {
-    const n = norm(v)
-    return n == null ? null : n.toLowerCase()
+function checkCorrect(student, rawCorrect) {
+    if (student == null || student === '') return false;
+    if (rawCorrect == null || rawCorrect === '') return false;
+    
+    const s = student.trim().toLowerCase();
+    // Split by | or , to allow multiple correct variants
+    const accepted = String(rawCorrect)
+        .split(/[|,]/)
+        .map(x => x.trim().toLowerCase())
+        .filter(Boolean);
+    
+    return accepted.some(a => a === s);
 }
 
 /** Given a question block and the answers object, return an array of
@@ -27,7 +36,7 @@ function getRows(q, answers) {
             const num = start + i
             const student = norm(answers[num])
             const correct = (q.correctAnswers || [])[i] ?? q.correctAnswer ?? ''
-            const isCorrect = student != null && normLower(student) === String(correct).trim().toLowerCase()
+            const isCorrect = checkCorrect(student, correct)
             return { number: num, label: `Q${num}`, student: student ?? '—', correct: correct || '—', isCorrect }
         })
     }
@@ -42,7 +51,7 @@ function getRows(q, answers) {
             const num = start + i
             const student = norm(answers[num])
             const correct = (q.correctAnswers || [])[i] ?? ''
-            const isCorrect = student != null && normLower(student) === String(correct).trim().toLowerCase()
+            const isCorrect = checkCorrect(student, correct)
             return { number: num, label: `Q${num}`, student: student ?? '—', correct: correct || '—', isCorrect }
         })
     }
@@ -68,7 +77,7 @@ function getRows(q, answers) {
             const num = start + i
             const student = norm(answers[num])
             const correct = (q.correctAnswers || [])[i] ?? ''
-            const isCorrect = student != null && normLower(student) === String(correct).trim().toLowerCase()
+            const isCorrect = checkCorrect(student, correct)
             return {
                 number: num,
                 label: `Q${num}`,
@@ -82,7 +91,7 @@ function getRows(q, answers) {
     // TFNG / MCQ / Short answer — single answer
     const student = norm(answers[start])
     const correct = q.correctAnswer ?? (q.correctAnswers || [])[0] ?? ''
-    const isCorrect = student != null && normLower(student) === String(correct).trim().toLowerCase()
+    const isCorrect = checkCorrect(student, correct)
     return [{ number: start, label: `Q${start}`, student: student ?? '—', correct: correct || '—', isCorrect }]
 }
 
@@ -364,7 +373,7 @@ function ScoredAnswers({ sections, answers, moduleKey, scores }) {
                         </div>
 
                         {section.instructions && (
-                            <div className="as-section-instructions">{section.instructions}</div>
+                            <div className="as-section-instructions" dangerouslySetInnerHTML={{ __html: section.instructions }} />
                         )}
 
                         {(section.questions || []).map((q, qi) => {
@@ -759,7 +768,7 @@ function QuestionBlock({ q, rows }) {
             <div className="as-q-block-header">
                 <span className="as-q-type-badge">{q.type?.replace(/-/g, ' ')}</span>
                 {q.instructionText && (
-                    <span className="as-q-instruction">{q.instructionText}</span>
+                    <span className="as-q-instruction" dangerouslySetInnerHTML={{ __html: q.instructionText }} />
                 )}
                 <span className="as-q-score-badge">
                     {correctCount}/{rows.length}

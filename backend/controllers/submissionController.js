@@ -85,8 +85,8 @@ function scoreQuestion(q, answers) {
         const num = start + i;
         const studentAns = norm(answers[num]);
         const rawCorrect = (correctAnswers[i] ?? correctAnswers[0]) || '';
-        // Support pipe-separated alternatives: "1912 | nineteen twelve"
-        const accepted = rawCorrect.split('|').map(s => s.trim().toLowerCase()).filter(Boolean);
+        // Support pipe or comma separated alternatives: "1912 | nineteen twelve, 19:12"
+        const accepted = String(rawCorrect).split(/[|,]/).map(s => s.trim().toLowerCase()).filter(Boolean);
         if (accepted.length > 0 && accepted.some(a => a === studentAns)) score++;
     }
     return { score, total };

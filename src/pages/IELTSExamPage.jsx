@@ -139,9 +139,10 @@ export default function IELTSExamPage() {
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
     // Highlight state — stored in React so highlights survive section navigation
-    const [highlights, setHighlights] = useState({}) // { [sectionKey]: [{start, end, color}] }
+    const [highlights, setHighlights] = useState({}) // { [sectionKey]: [{start, end, color, text}] }
     const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0 })
-    const savedRangeRef = useRef(null)            // browser Range saved on mouseup
+    // Store pre-computed character offsets (NOT a DOM Range — Ranges are invalidated by mark.js unmark())
+    const savedOffsetsRef = useRef(null)          // { start, end, text } computed eagerly on mouseup
     const highlightContainerRef = useRef(null)    // current section's highlightable DOM node
 
     // Speaking session elapsed timer
@@ -612,8 +613,8 @@ export default function IELTSExamPage() {
             setSelectionPopup(p => ({ ...p, visible: false }))
             return
         }
-        const text = selection.toString().trim()
-        if (text.length < 2) {
+        const selectedText = selection.toString().trim()
+        if (selectedText.length < 2) {
             setSelectionPopup(p => ({ ...p, visible: false }))
             return
         }
@@ -624,29 +625,47 @@ export default function IELTSExamPage() {
             setSelectionPopup(p => ({ ...p, visible: false }))
             return
         }
-        savedRangeRef.current = range.cloneRange()
+
+        // Compute character offsets NOW — before setSelectionPopup triggers a re-render,
+        // which fires useLayoutEffect → mark.js unmark() → text nodes move → Range becomes stale.
+        const start = getCaretOffset(container, range.startContainer, range.startOffset)
+        const end   = getCaretOffset(container, range.endContainer,   range.endOffset)
+        if (start >= end) {
+            setSelectionPopup(p => ({ ...p, visible: false }))
+            return
+        }
+        savedOffsetsRef.current = { start, end, text: selectedText }
+
         const rect = range.getBoundingClientRect()
-        setSelectionPopup({ visible: true, x: rect.left + rect.width / 2, y: Math.max(70, rect.top) })
+        // Clamp popup X so it never clips the right edge; flip below selection when near top
+        const popupX = Math.min(Math.max(rect.left + rect.width / 2, 110), window.innerWidth - 110)
+        const popupY = rect.top < 120 ? rect.bottom + 12 : rect.top
+        setSelectionPopup({ visible: true, x: popupX, y: popupY })
     }, [])
 
     const applyHighlight = useCallback((color = 'yellow') => {
-        if (!savedRangeRef.current) return
-        const container = highlightContainerRef.current
-        if (!container) return
-
-        const range = savedRangeRef.current
-        const start = getCaretOffset(container, range.startContainer, range.startOffset)
-        const end   = getCaretOffset(container, range.endContainer,   range.endOffset)
-        if (start >= end) return
-
+        if (!savedOffsetsRef.current) return
+        const { start, end, text } = savedOffsetsRef.current
         setHighlights(prev => {
             const existing = prev[currentSectionKey] || []
             // Remove any overlapping highlight before adding the new one
             const filtered = existing.filter(h => h.end <= start || h.start >= end)
-            return { ...prev, [currentSectionKey]: [...filtered, { start, end, color }] }
+            return { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] }
         })
+        savedOffsetsRef.current = null
+        setSelectionPopup(p => ({ ...p, visible: false }))
+        window.getSelection()?.removeAllRanges()
+    }, [currentSectionKey])
 
-        savedRangeRef.current = null
+    // Remove any highlights that overlap the current selection without adding a new color
+    const eraseHighlight = useCallback(() => {
+        if (!savedOffsetsRef.current) return
+        const { start, end } = savedOffsetsRef.current
+        setHighlights(prev => {
+            const existing = prev[currentSectionKey] || []
+            return { ...prev, [currentSectionKey]: existing.filter(h => h.end <= start || h.start >= end) }
+        })
+        savedOffsetsRef.current = null
         setSelectionPopup(p => ({ ...p, visible: false }))
         window.getSelection()?.removeAllRanges()
     }, [currentSectionKey])
@@ -1131,7 +1150,7 @@ export default function IELTSExamPage() {
             {selectionPopup.visible && (
                 <div
                     className="ip-selection-popup"
-                    style={{ left: selectionPopup.x, top: Math.max(70, selectionPopup.y) }}
+                    style={{ left: selectionPopup.x, top: selectionPopup.y }}
                     onMouseDown={e => { e.preventDefault(); e.stopPropagation() }}
                 >
                     <span className="ip-hl-popup-label">Highlight</span>
@@ -1141,13 +1160,21 @@ export default function IELTSExamPage() {
                             key={c}
                             className={`ip-hl-dot ip-hl-dot--${c}`}
                             onClick={() => applyHighlight(c)}
-                            title={c}
+                            title={c.charAt(0).toUpperCase() + c.slice(1)}
                         />
                     ))}
                     <div className="ip-hl-popup-divider" />
                     <button
+                        className="ip-selection-popup-btn ip-selection-popup-btn--erase"
+                        onClick={eraseHighlight}
+                        title="Remove highlight"
+                    >⌫</button>
+                    <button
                         className="ip-selection-popup-btn ip-selection-popup-btn--close"
-                        onClick={() => setSelectionPopup(p => ({ ...p, visible: false }))}
+                        onClick={() => {
+                            savedOffsetsRef.current = null
+                            setSelectionPopup(p => ({ ...p, visible: false }))
+                        }}
                         title="Cancel"
                     >✕</button>
                 </div>

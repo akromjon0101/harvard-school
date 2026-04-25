@@ -2159,6 +2159,16 @@
   font-size: 11px;
 }
 
+.ip-selection-popup-btn--erase {
+  font-size: 14px;
+  color: #f87171;
+}
+
+.ip-selection-popup-btn--erase:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
 /* ── Legacy writing textarea (kept for safety) ────────────────────── */
 .ip-writing-textarea {
   width: 100%;
