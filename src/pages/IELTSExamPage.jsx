@@ -301,9 +301,9 @@ export default function IELTSExamPage() {
         const container = highlightContainerRef.current;
         if (!container) return;
 
-        // Clean previous spans that were added manually (or by previous render)
-        // Note: we target spans with our specific data attribute
-        const existing = container.querySelectorAll('span[data-mock-hl]');
+        // Clean previous marks that were added manually (or by previous render)
+        // Note: we target marks with our specific data attribute
+        const existing = container.querySelectorAll('mark[data-mock-hl]');
         existing.forEach(el => {
             const parent = el.parentNode;
             while (el.firstChild) parent.insertBefore(el.firstChild, el);
@@ -314,8 +314,8 @@ export default function IELTSExamPage() {
         const sectionHighlights = highlights[currentSectionKey] || [];
         if (sectionHighlights.length === 0) return;
 
-        // Apply each highlight from state using a native approach
-        sectionHighlights.forEach(hl => {
+        // Apply highlights in reverse order (optional but often safer for DOM mutation)
+        [...sectionHighlights].sort((a,b) => b.start - a.start).forEach(hl => {
             try {
                 const range = document.createRange();
                 let startNode = null, endNode = null;
@@ -342,13 +342,21 @@ export default function IELTSExamPage() {
                 if (startNode && endNode) {
                     range.setStart(startNode, startOffset);
                     range.setEnd(endNode, endOffset);
-                    const span = document.createElement("span");
-                    span.className = `ip-text-highlight ip-hl-${hl.color || 'yellow'}`;
-                    span.dataset.mockHl = "true";
-                    span.dataset.start = String(hl.start);
-                    span.dataset.end = String(hl.end);
-                    span.title = 'Click to remove';
-                    range.surroundContents(span);
+                    
+                    // ── USER REQUESTED 4-STEP ALGORITHM ──
+                    // 1. selection range already defined above
+                    // 2. Extract contents
+                    const fragment = range.extractContents();
+                    // 3. Wrap in element
+                    const mark = document.createElement("mark");
+                    mark.className = `ip-text-highlight ip-hl-${hl.color || 'yellow'}`;
+                    mark.dataset.mockHl = "true";
+                    mark.dataset.start = String(hl.start);
+                    mark.dataset.end = String(hl.end);
+                    mark.title = 'Click to remove';
+                    mark.appendChild(fragment);
+                    // 4. Insert back
+                    range.insertNode(mark);
                 }
             } catch (err) {
                 console.warn("Failed to re-apply highlight:", err);
@@ -708,31 +716,35 @@ export default function IELTSExamPage() {
         const { start, end, text } = savedOffsetsRef.current;
         const range = selection.getRangeAt(0);
 
-        // 1. Immediate Visual Feedback (Direct DOM manipulation as requested)
-        const span = document.createElement("span");
-        span.className = `ip-text-highlight ip-hl-${color}`;
-        span.dataset.mockHl = "true";
-        span.dataset.start = String(start);
-        span.dataset.end = String(end);
-        span.title = 'Click to remove';
-
         try {
-            range.surroundContents(span);
+            // ── USER REQUESTED 4-STEP ALGORITHM ──
+            // 1. selection range already defined above
+            // 2. Extract contents
+            const fragment = range.extractContents();
             
-            // 2. Sync to State for persistence
+            // 3. Wrap in element
+            const mark = document.createElement("mark");
+            mark.className = `ip-text-highlight ip-hl-${color}`;
+            mark.dataset.mockHl = "true";
+            mark.dataset.start = String(start);
+            mark.dataset.end = String(end);
+            mark.title = 'Click to remove';
+            mark.appendChild(fragment);
+
+            // 4. Insert back
+            range.insertNode(mark);
+            
+            // 5. Sync to State for persistence
             setHighlights(prev => {
                 const existing = prev[currentSectionKey] || [];
                 const filtered = existing.filter(h => h.end <= start || h.start >= end);
                 const updated = { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] };
-                
-                // Save to localStorage immediately
                 localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
                 return updated;
             });
         } catch (e) {
-            console.warn("Complex selection detected. Falling back to state-driven only render.");
-            // If surroundContents fails (e.g. crossing tags), we still save to state
-            // and our useLayoutEffect walker will handle the complex wrapping on next render.
+            console.error("Highlighting error:", e);
+            // Fallback for extremely complex selections
             setHighlights(prev => {
                 const existing = prev[currentSectionKey] || [];
                 const filtered = existing.filter(h => h.end <= start || h.start >= end);
@@ -768,13 +780,13 @@ export default function IELTSExamPage() {
         }
     }, [currentSectionKey])
 
-    // Click on a highlight span → remove it from state
+    // Click on a highlight mark → remove it from state
     const handleHighlightClick = useCallback((e) => {
-        const span = e.target.closest('span[data-mock-hl]')
-        if (!span) return
+        const mark = e.target.closest('mark[data-mock-hl]')
+        if (!mark) return
         
-        const start = parseInt(span.dataset.start)
-        const end = parseInt(span.dataset.end)
+        const start = parseInt(mark.dataset.start)
+        const end = parseInt(mark.dataset.end)
         
         if (isNaN(start) || isNaN(end)) return
 
