@@ -787,13 +787,7 @@ export default function IELTSExamPage() {
         e.stopPropagation()
     }, [currentSectionKey, id])
 
-    // Global click listener for highlight removal
-    useEffect(() => {
-        const container = highlightContainerRef.current;
-        if (!container) return;
-        container.addEventListener('click', handleHighlightClick);
-        return () => container.removeEventListener('click', handleHighlightClick);
-    }, [currentSectionKey, handleHighlightClick]);
+    // Global click listener for highlight removal is now handled via inline onClick on the body
 
     // ── Part label ────────────────────────────────────────────────────────────
     const getPartLabel = (mod, idx) => {
@@ -964,7 +958,7 @@ export default function IELTSExamPage() {
                 <div 
                     ref={examPaperRef}
                     onMouseUp={handleGlobalMouseUp}
-                    onClick={handleMarkClick}
+                    onClick={handleHighlightClick}
                     className={[
                     'ip-paper',
                     isListening ? 'ip-paper-listening' : '',
