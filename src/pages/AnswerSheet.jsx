@@ -776,11 +776,7 @@ function QuestionBlock({ q, rows }) {
             </div>
 
             {q.questionText && q.type !== 'mcq' && q.type !== 'tfng' && (
-                <div className="as-q-text">
-                    {q.questionText.length > 200
-                        ? q.questionText.substring(0, 200) + '…'
-                        : q.questionText}
-                </div>
+                <div className="as-q-text" dangerouslySetInnerHTML={{ __html: q.questionText }} />
             )}
 
             <div className="as-answer-rows">
