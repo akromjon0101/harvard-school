@@ -312,17 +312,20 @@ export default function IELTSExamPage() {
         const paper = examPaperRef.current
         if (!paper) return
         const list = highlights[currentSectionKey] || []
+        const hasExistingMarks = paper.querySelector('mark.ip-text-highlight') !== null
 
-        // 1. Clear all existing marks from the whole paper
+        // Early exit: nothing to apply and nothing to clean — skip DOM work entirely.
+        // This makes every timer tick free when there are no highlights on this section.
+        if (list.length === 0 && !hasExistingMarks) return
+
         new Mark(paper).unmark({
             done: () => {
-                // 2. Group highlights by zone, then mark each zone's container independently
+                if (list.length === 0) return
                 const byZone = {}
                 list.forEach((hl, idx) => {
                     const z = hl.zone || 'paper'
                     ;(byZone[z] = byZone[z] || []).push({ ...hl, idx })
                 })
-
                 Object.entries(byZone).forEach(([zone, marks]) => {
                     const container = zone === 'paper'
                         ? paper
@@ -346,7 +349,7 @@ export default function IELTSExamPage() {
                 })
             },
         })
-    }) // no deps — must run after every render so React's dangerouslySetInnerHTML resets in question components are always overwritten before paint
+    }) // no deps — runs after every render; early-exit when no highlights makes timer ticks free
 
     // Per-module timer: Reading = 60 min, Writing = 60 min, others = no timer
     useEffect(() => {
