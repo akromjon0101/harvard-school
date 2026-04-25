@@ -1,56 +1,61 @@
-// Shared highlight utilities for exam page
+/**
+ * highlightUtils.js
+ * Professional-grade utilities for text highlighting in React applications.
+ */
 
-// Normalize line endings so DOM text nodes and raw string match
+import React from 'react';
+
+/**
+ * Normalizes text to ensure consistent character counting across different OS/browsers.
+ */
 export function normalizeText(str) {
-    return str ? str.replace(/\r\n/g, '\n').replace(/\r/g, '\n') : ''
+  return str ? str.replace(/\r\n/g, '\n').replace(/\r/g, '\n') : '';
 }
 
-// Strip HTML tags to get plain text (for rich-text fields)
+/**
+ * Safely strips HTML from a string to get plain text.
+ */
 export function stripHtml(html) {
-    if (!html) return ''
-    if (typeof document === 'undefined') return html.replace(/<[^>]*>/g, '')
-    const tmp = document.createElement('div')
-    tmp.innerHTML = html
-    return tmp.textContent || tmp.innerText || ''
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
 }
 
-// Renders passage text with highlights as React elements (no dangerouslySetInnerHTML)
-import React from 'react'
-export function renderHighlightedText(rawText, highlights) {
-    const text = normalizeText(rawText)
-    if (!text) return null
-    if (!highlights?.length) return text
-    const sorted = highlights.map((h, i) => ({ ...h, origIdx: i })).sort((a, b) => a.start - b.start)
-    const parts = []
-    let cursor = 0
-    for (const h of sorted) {
-        if (h.start >= cursor && h.end > h.start) {
-            if (h.start > cursor) parts.push(text.slice(cursor, h.start))
-            parts.push(
-                React.createElement('mark', {
-                    key: `hl-${h.start}`,
-                    className: `ip-text-highlight ip-hl-${h.color || 'yellow'}`,
-                    'data-hl': h.origIdx,
-                    title: 'Click to remove',
-                }, text.slice(h.start, h.end))
-            )
-            cursor = h.end
-        }
+/**
+ * Robustly calculates the character offset of a point in a DOM tree relative to a container.
+ * This handles nested elements, line breaks, and mark.js insertions correctly.
+ */
+export function getCaretOffset(container, node, offset) {
+  let charCount = 0;
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+  
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode;
+    if (textNode === node) {
+      charCount += offset;
+      break;
     }
-    if (cursor < text.length) parts.push(text.slice(cursor))
-    return parts
+    charCount += textNode.textContent.length;
+  }
+  return charCount;
 }
 
-// Accurate caret offset using browser-native range serialization.
-// This is the most reliable approach — the browser handles all edge cases
-// including shadow DOM, void elements, and complex nested HTML.
-export function getCaretOffset(container, targetNode, targetOffset) {
-    try {
-        const r = document.createRange()
-        r.setStart(container, 0)
-        r.setEnd(targetNode, targetOffset)
-        return r.toString().length
-    } catch {
-        return 0
+/**
+ * Given character offsets, find the actual DOM nodes and internal offsets.
+ * Used for restoring selections or debugging.
+ */
+export function getNodeAtOffset(container, targetOffset) {
+  let charCount = 0;
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+  
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode;
+    const len = textNode.textContent.length;
+    if (charCount + len >= targetOffset) {
+      return { node: textNode, offset: targetOffset - charCount };
     }
+    charCount += len;
+  }
+  return { node: null, offset: 0 };
 }

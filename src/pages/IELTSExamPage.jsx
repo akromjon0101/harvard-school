@@ -7,6 +7,7 @@ import { stripHtml, getCaretOffset } from '../utils/highlightUtils'
 import Mark from 'mark.js'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
+import '../styles/highlight.css';
 
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
 
@@ -298,32 +299,39 @@ export default function IELTSExamPage() {
     // After every render, clear then re-apply stored highlights via mark.js.
     // mark.js markRanges() accepts {start, length} character offsets from textContent,
     // which matches exactly what getCaretOffset() returns (range.toString().length).
+    // ── Highlight Synchronization ───────────────────────────────────────────
+    // This effect ensures the DOM (mark.js) is always in sync with the highlights state.
     useLayoutEffect(() => {
-        const container = highlightContainerRef.current
-        if (!container) return
-        const markInstance = new Mark(container)
-        // unmark() removes all <mark> elements cleanly, then the done callback re-applies.
-        markInstance.unmark({
-            done: () => {
-                const sectionHighlights = highlights[currentSectionKey] || []
-                sectionHighlights.forEach((hl, origIdx) => {
-                    markInstance.markRanges(
-                        [{ start: hl.start, length: hl.end - hl.start }],
-                        {
-                            element: 'mark',
-                            className: `ip-text-highlight ip-hl-${hl.color || 'yellow'}`,
-                            each: el => {
-                                el.dataset.hl = String(origIdx)
-                                el.title = 'Click to remove'
-                            }
-                        }
-                    )
-                })
-            }
-        })
-    // section?.passageContent in deps ensures re-apply when DOM is refreshed by dangerouslySetInnerHTML
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentSectionKey, highlights, section?.passageContent])
+        const container = highlightContainerRef.current;
+        if (!container) return;
+
+        // Ensure user-select is enabled for highlighting
+        container.style.userSelect = "text";
+        container.style.webkitUserSelect = "text";
+
+        const markInstance = new Mark(container);
+        
+        // Step 1: Clean the DOM synchronously.
+        markInstance.unmark();
+
+        // Step 2: Apply all highlights from state.
+        const sectionHighlights = highlights[currentSectionKey] || [];
+        if (sectionHighlights.length === 0) return;
+
+        sectionHighlights.forEach((hl, i) => {
+            markInstance.markRanges(
+                [{ start: hl.start, length: hl.end - hl.start }],
+                {
+                    element: 'mark',
+                    className: `ip-text-highlight ip-hl-${hl.color || 'yellow'}`,
+                    each: el => {
+                        el.dataset.hl = String(i);
+                        el.title = 'Click to remove highlight';
+                    }
+                }
+            );
+        });
+    }, [currentSectionKey, highlights, (section?.passageContent || '')]);
 
     // Per-module timer: Reading = 60 min, Writing = 60 min, others = no timer
     useEffect(() => {
@@ -337,7 +345,12 @@ export default function IELTSExamPage() {
             const saved = localStorage.getItem(`exam_timer_writing_${id}`)
             setTimeLeft(saved ? parseInt(saved, 10) : 60 * 60)
             setTimerPaused(false)
-        } else if (isListening || isSpeaking) {
+        } else if (isSpeaking) {
+            moduleTimerRef.current = 'speaking'
+            const saved = localStorage.getItem(`exam_timer_speaking_${id}`)
+            setTimeLeft(saved ? parseInt(saved, 10) : 15 * 60)
+            setTimerPaused(false)
+        } else if (isListening) {
             moduleTimerRef.current = null
             setTimeLeft(null)
             setTimerPaused(true)
@@ -369,6 +382,8 @@ export default function IELTSExamPage() {
             localStorage.setItem(`exam_timer_reading_${id}`, String(timeLeft))
         } else if (moduleTimerRef.current === 'writing') {
             localStorage.setItem(`exam_timer_writing_${id}`, String(timeLeft))
+        } else if (moduleTimerRef.current === 'speaking') {
+            localStorage.setItem(`exam_timer_speaking_${id}`, String(timeLeft))
         }
         const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000)
         return () => clearInterval(timer)
@@ -605,43 +620,56 @@ export default function IELTSExamPage() {
     const examPaperRef = useRef(null)
 
     const handleGlobalMouseUp = useCallback((e) => {
-        // Ignore clicks/releases on interactive elements; allow ending selection on marks
-        if (e.target.closest('input, textarea, button, select, [contenteditable]')) return
-
-        const selection = window.getSelection()
-        if (!selection || selection.isCollapsed) {
-            setSelectionPopup(p => ({ ...p, visible: false }))
-            return
+        // 1. Ignore clicks on buttons/inputs/etc
+        if (e.target.closest('button, input, textarea, select, .as-btn-back, .sh-tap-hint')) {
+            return;
         }
-        const selectedText = selection.toString().trim()
+
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+            setSelectionPopup(p => ({ ...p, visible: false }));
+            return;
+        }
+
+        const selectedText = selection.toString().trim();
         if (selectedText.length < 2) {
-            setSelectionPopup(p => ({ ...p, visible: false }))
-            return
+            setSelectionPopup(p => ({ ...p, visible: false }));
+            return;
         }
-        const range = selection.getRangeAt(0)
-        // Must be inside the current highlightable container
-        const container = highlightContainerRef.current
+
+        const range = selection.getRangeAt(0);
+        const container = highlightContainerRef.current;
+
+        // 2. Safety check: ensure selection is within the highlightable container
         if (!container || !container.contains(range.commonAncestorContainer)) {
-            setSelectionPopup(p => ({ ...p, visible: false }))
-            return
+            setSelectionPopup(p => ({ ...p, visible: false }));
+            return;
         }
 
-        // Compute character offsets NOW — before setSelectionPopup triggers a re-render,
-        // which fires useLayoutEffect → mark.js unmark() → text nodes move → Range becomes stale.
-        const start = getCaretOffset(container, range.startContainer, range.startOffset)
-        const end   = getCaretOffset(container, range.endContainer,   range.endOffset)
-        if (start >= end) {
-            setSelectionPopup(p => ({ ...p, visible: false }))
-            return
-        }
-        savedOffsetsRef.current = { start, end, text: selectedText }
+        // 3. Robust Offset Calculation: compute character offsets relative to container
+        // This is done BEFORE re-render to ensure accuracy.
+        try {
+            const start = getCaretOffset(container, range.startContainer, range.startOffset);
+            const end = getCaretOffset(container, range.endContainer, range.endOffset);
 
-        const rect = range.getBoundingClientRect()
-        // Clamp popup X so it never clips the right edge; flip below selection when near top
-        const popupX = Math.min(Math.max(rect.left + rect.width / 2, 110), window.innerWidth - 110)
-        const popupY = rect.top < 120 ? rect.bottom + 12 : rect.top
-        setSelectionPopup({ visible: true, x: popupX, y: popupY })
-    }, [])
+            if (start >= end) {
+                setSelectionPopup(p => ({ ...p, visible: false }));
+                return;
+            }
+
+            savedOffsetsRef.current = { start, end, text: selectedText };
+
+            // 4. Position the popup above the selection
+            const rect = range.getBoundingClientRect();
+            const popupX = Math.min(Math.max(rect.left + rect.width / 2, 110), window.innerWidth - 110);
+            const popupY = rect.top < 120 ? rect.bottom + 12 : rect.top;
+            
+            setSelectionPopup({ visible: true, x: popupX, y: popupY });
+        } catch (err) {
+            console.warn('Highlight selection failed:', err);
+            setSelectionPopup(p => ({ ...p, visible: false }));
+        }
+    }, []);
 
     const applyHighlight = useCallback((color = 'yellow') => {
         if (!savedOffsetsRef.current) return

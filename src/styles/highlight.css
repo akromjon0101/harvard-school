@@ -1,0 +1,10 @@
+.ip-text-highlight {
+  background: yellow;
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: background 0.2s;
+}
+.ip-hl-yellow { background: #fff89a !important; }
+.ip-hl-green  { background: #b9fbc0 !important; }
+.ip-hl-blue   { background: #a3d8f4 !important; }
+.ip-hl-pink   { background: #ffd6e0 !important; }

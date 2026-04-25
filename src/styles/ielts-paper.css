@@ -3928,13 +3928,12 @@
 .sh-p2-card {
   flex: 1;
   min-width: 0;
-  min-height: 140px;
-  max-height: 200px;
-  overflow-y: auto;
+  min-height: 200px; /* Increased from 140px */
+  max-height: none;   /* Disable scrolling within card as requested */
 }
 /* Smaller notecard textarea in 2-col layout */
 .sh-p2-card .sh-notecard-textarea {
-  min-height: 80px;
+  min-height: 180px; /* Much taller as requested */
 }
 
 /* Start block */
@@ -4184,7 +4183,7 @@
 
 .sh-notecard-textarea {
   width: 100%;
-  min-height: 110px;
+  min-height: 180px; /* Matches the part 2 variation */
   padding: 12px 14px;
   border: 1.5px solid #fcd34d;
   border-radius: 12px;
