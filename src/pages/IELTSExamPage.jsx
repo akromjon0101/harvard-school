@@ -4,11 +4,10 @@ import { api } from '../services/api'
 import QuestionRenderer from '../components/exam/QuestionRenderer'
 import SpeakingHero from '../components/exam/SpeakingHero'
 import { stripHtml, getRangeOffsets } from '../utils/highlightUtils'
+import Mark from 'mark.js'
 import '../styles/ielts-paper.css'
 import '../styles/ielts-premium.css'
 import '../styles/highlight.css';
-
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api'
 
 // Count how many question slots a question block occupies
 function getQCount(q) {
@@ -37,7 +36,8 @@ function formatTime(seconds) {
 
 // ── Writing area ──────────────────────────────────────────────────────────────
 function WritingArea({ sectionIdx, value, onChange }) {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    let user = {}
+    try { user = JSON.parse(localStorage.getItem('user') || '{}') } catch { /* corrupted */ }
     const minWords = sectionIdx === 0 ? 150 : 250
     const wordCount = value.trim() ? value.trim().split(/\s+/).filter(Boolean).length : 0
     const pct = Math.min((wordCount / minWords) * 100, 100)
@@ -89,7 +89,7 @@ function WritingArea({ sectionIdx, value, onChange }) {
 // moduleAnswers: plain {qNum: answer} map for QuestionRenderer
 // module: current module string (for flag key)
 // onFocus: called with qNum when user interacts with this block
-function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onToggleFlag, onFocus, hideInstruction }) {
+function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onToggleFlag, onFocus, hideInstruction, modifiedHtml }) {
     const qNum = q.startNumber ?? q.questionNumber
     const isFlagged = !!flagged[`${module}_${qNum}`]
 
@@ -113,6 +113,7 @@ function PaperQuestionBlock({ q, moduleAnswers, module, onChange, flagged, onTog
                 onChange={onChange}
                 qNumber={qNum}
                 hideInstruction={hideInstruction}
+                modifiedHtml={modifiedHtml}
             />
         </div>
     )
@@ -138,12 +139,11 @@ export default function IELTSExamPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
-    // Highlight state — stored in React so highlights survive section navigation
-    const [highlights, setHighlights] = useState({}) // { [sectionKey]: [{start, end, color, text}] }
+    // Highlight state: { [sectionKey]: [{start, end, color}] }
+    const [highlights, setHighlights] = useState({})
     const [selectionPopup, setSelectionPopup] = useState({ visible: false, x: 0, y: 0, position: 'above' })
-    // Store pre-computed character offsets (NOT a DOM Range — Ranges are invalidated by mark.js unmark())
-    const savedOffsetsRef = useRef(null)          // { start, end, text } computed eagerly on mouseup
-    const highlightContainerRef = useRef(null)    // current section's highlightable DOM node
+    // Pre-computed offsets saved on mouseup (Range is invalid after re-render, plain numbers are not)
+    const savedOffsetsRef = useRef(null)
 
     // Speaking session elapsed timer
     const speakingSessionStartRef = useRef(null)
@@ -158,8 +158,6 @@ export default function IELTSExamPage() {
     const [audioCheckConfirmed, setAudioCheckConfirmed] = useState(false)
     const [testAudioPlayed, setTestAudioPlayed] = useState(false)
 
-    // TTS state for reading speaking prompts aloud
-    const [ttsSpeaking, setTtsSpeaking] = useState(false)
     const [loadingTimedOut, setLoadingTimedOut] = useState(false)
 
     // Help user if load takes too long
@@ -242,10 +240,9 @@ export default function IELTSExamPage() {
     }, [flagged, id])
 
     useEffect(() => {
-        if (id) {
-            localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(highlights))
-        }
+        if (id) localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(highlights))
     }, [highlights, id])
+
 
     // Reset audio on part change
     useEffect(() => {
@@ -260,15 +257,15 @@ export default function IELTSExamPage() {
     // Hide selection popup on click outside the popup
     useEffect(() => {
         const hide = (e) => {
-            // Don't hide when clicking inside the popup itself
             if (e.target.closest('.ip-selection-popup')) return
-            setSelectionPopup(p => ({ ...p, visible: false }))
+            setSelectionPopup(p => p.visible ? { ...p, visible: false } : p)
         }
         document.addEventListener('mousedown', hide)
         return () => document.removeEventListener('mousedown', hide)
     }, [])
-    useEffect(() => { setSelectionPopup(p => ({ ...p, visible: false })) }, [partIndex])
+    useEffect(() => { setSelectionPopup(p => p.visible ? { ...p, visible: false } : p) }, [partIndex])
 
+    // ── Build flat parts list ─────────────────────────────────────────────────
     // ── Build flat parts list ─────────────────────────────────────────────────
     const parts = useMemo(() => {
         if (!exam?.modules) return []
@@ -295,74 +292,61 @@ export default function IELTSExamPage() {
     // Key that uniquely identifies the current highlightable section
     const currentSectionKey = `${currentModule}_${sectionIdx ?? 0}`
 
-    // ── Native Highlight Synchronization ──────────────────────────────────
-    // This effect re-applies stored highlights from state to the DOM on every render/load.
+    // Set innerHTML for the uncontrolled content div.
+    // Runs BEFORE the marks effect (React executes layout effects in definition order).
+    // Using [currentSectionKey] ensures it fires on section navigation but NOT on
+    // timer ticks / answer changes — so marks are never erased by a React re-render.
     useLayoutEffect(() => {
-        const container = highlightContainerRef.current;
-        if (!container) return;
+        if (!contentHtmlRef.current) return
+        const html = isListening && !section?.passageContent
+            ? (section?.instructions || '')
+            : (section?.passageContent || '')
+        contentHtmlRef.current.innerHTML = html
+    }, [currentSectionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-        // Clean previous marks that were added manually (or by previous render)
-        // Note: we target marks with our specific data attribute
-        const existing = container.querySelectorAll('mark[data-mock-hl]');
-        existing.forEach(el => {
-            const parent = el.parentNode;
-            while (el.firstChild) parent.insertBefore(el.firstChild, el);
-            parent.removeChild(el);
-            parent.normalize(); // Merge text nodes back
-        });
+    // Re-apply highlights via mark.js.
+    // Each highlight stores the `zone` it was captured in (data-hl-zone attribute on the
+    // container element). Offsets are relative to that specific container — NOT the whole paper —
+    // so mark.js counts the same characters as getRangeOffsets, guaranteed.
+    useLayoutEffect(() => {
+        const paper = examPaperRef.current
+        if (!paper) return
+        const list = highlights[currentSectionKey] || []
 
-        const sectionHighlights = highlights[currentSectionKey] || [];
-        if (sectionHighlights.length === 0) return;
+        // 1. Clear all existing marks from the whole paper
+        new Mark(paper).unmark({
+            done: () => {
+                // 2. Group highlights by zone, then mark each zone's container independently
+                const byZone = {}
+                list.forEach((hl, idx) => {
+                    const z = hl.zone || 'paper'
+                    ;(byZone[z] = byZone[z] || []).push({ ...hl, idx })
+                })
 
-        // Apply highlights in reverse order (optional but often safer for DOM mutation)
-        [...sectionHighlights].sort((a,b) => b.start - a.start).forEach(hl => {
-            try {
-                const range = document.createRange();
-                let startNode = null, endNode = null;
-                let startOffset = 0, endOffset = 0;
-                let charCount = 0;
-
-                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-                while (walker.nextNode()) {
-                    const node = walker.currentNode;
-                    const nextCount = charCount + node.textContent.length;
-                    
-                    if (!startNode && hl.start >= charCount && hl.start < nextCount) {
-                        startNode = node;
-                        startOffset = hl.start - charCount;
-                    }
-                    if (!endNode && hl.end > charCount && hl.end <= nextCount) {
-                        endNode = node;
-                        endOffset = hl.end - charCount;
-                    }
-                    if (startNode && endNode) break;
-                    charCount = nextCount;
-                }
-
-                if (startNode && endNode) {
-                    range.setStart(startNode, startOffset);
-                    range.setEnd(endNode, endOffset);
-                    
-                    // ── USER REQUESTED 4-STEP ALGORITHM ──
-                    // 1. selection range already defined above
-                    // 2. Extract contents
-                    const fragment = range.extractContents();
-                    // 3. Wrap in element
-                    const mark = document.createElement("mark");
-                    mark.className = `ip-text-highlight ip-hl-${hl.color || 'yellow'}`;
-                    mark.dataset.mockHl = "true";
-                    mark.dataset.start = String(hl.start);
-                    mark.dataset.end = String(hl.end);
-                    mark.title = 'Click to remove';
-                    mark.appendChild(fragment);
-                    // 4. Insert back
-                    range.insertNode(mark);
-                }
-            } catch (err) {
-                console.warn("Failed to re-apply highlight:", err);
-            }
-        });
-    }, [currentSectionKey, highlights, (section?.passageContent || '')]);
+                Object.entries(byZone).forEach(([zone, marks]) => {
+                    const container = zone === 'paper'
+                        ? paper
+                        : (paper.querySelector(`[data-hl-zone="${zone}"]`) || paper)
+                    const instance = new Mark(container)
+                    marks.forEach(({ start, end, color, idx }) => {
+                        instance.markRanges(
+                            [{ start, length: end - start }],
+                            {
+                                element: 'mark',
+                                className: `ip-text-highlight ip-hl-${color || 'yellow'}`,
+                                acrossElements: true,
+                                exclude: ['input', 'textarea', 'select'],
+                                each: el => {
+                                    el.dataset.hl = String(idx)
+                                    el.title = 'Click to remove highlight'
+                                },
+                            }
+                        )
+                    })
+                })
+            },
+        })
+    }) // no deps — must run after every render so React's dangerouslySetInnerHTML resets in question components are always overwritten before paint
 
     // Per-module timer: Reading = 60 min, Writing = 60 min, others = no timer
     useEffect(() => {
@@ -423,10 +407,7 @@ export default function IELTSExamPage() {
 
     // Cancel TTS when leaving speaking section
     useEffect(() => {
-        if (!isSpeaking) {
-            window.speechSynthesis?.cancel()
-            setTtsSpeaking(false)
-        }
+        if (!isSpeaking) window.speechSynthesis?.cancel()
     }, [isSpeaking])
 
     // Speaking overall session timer
@@ -580,7 +561,8 @@ export default function IELTSExamPage() {
         setShowSubmitConfirm(false)
         setIsSubmitting(true)
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            let user = {}
+            try { user = JSON.parse(localStorage.getItem('user') || '{}') } catch { /* corrupted */ }
             await api('/submissions', 'POST', {
                 exam: id,
                 user: user?.id || user?._id,
@@ -589,7 +571,7 @@ export default function IELTSExamPage() {
             })
             localStorage.removeItem(`exam_answers_${id}`)
             localStorage.removeItem(`exam_flagged_${id}`)
-            localStorage.removeItem(`exam_highlights_${id}`)
+            localStorage.removeItem(`exam_highlights_${id}`) // Cleanup legacy
             localStorage.removeItem(`exam_timer_reading_${id}`)
             localStorage.removeItem(`exam_timer_writing_${id}`)
             navigate('/my-results')
@@ -649,157 +631,109 @@ export default function IELTSExamPage() {
 
     // ── Highlight helpers (state-based — survives re-renders and navigation) ────
     const examPaperRef = useRef(null)
+    // Uncontrolled ref for passage/task/context content divs.
+    // We set innerHTML manually so React NEVER owns these divs — mark.js marks survive
+    // all re-renders, StrictMode double-invocations, and timer ticks.
+    const contentHtmlRef = useRef(null)
 
     const handleGlobalMouseUp = useCallback((e) => {
-        // 1. Ignore clicks on buttons/inputs/etc
-        if (e.target.closest('button, input, textarea, select, .as-btn-back, .sh-tap-hint')) {
-            return;
+        // Never interfere with clicks inside the popup itself
+        if (e.target.closest('.ip-selection-popup')) return
+
+        // Textarea / select interactions should not trigger the highlight popup
+        if (e.target.closest('textarea, select')) {
+            setSelectionPopup(p => p.visible ? { ...p, visible: false } : p)
+            return
         }
 
-        const selection = window.getSelection();
+        const selection = window.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-            setSelectionPopup(p => ({ ...p, visible: false }));
-            return;
+            setSelectionPopup(p => p.visible ? { ...p, visible: false } : p)
+            return
         }
 
-        const selectedText = selection.toString().trim();
+        const selectedText = selection.toString().trim()
         if (selectedText.length < 2) {
-            setSelectionPopup(p => ({ ...p, visible: false }));
-            return;
+            setSelectionPopup(p => p.visible ? { ...p, visible: false } : p)
+            return
         }
 
-        const range = selection.getRangeAt(0);
-        const container = highlightContainerRef.current;
-
-        // 2. Safety check: ensure selection ends are within the highlightable container
-        // We use .contains on start/end specifically to be more forgiving than commonAncestorContainer
-        if (!container || (!container.contains(range.startContainer) && !container.contains(range.endContainer))) {
-            setSelectionPopup(p => ({ ...p, visible: false }));
-            return;
+        const range = selection.getRangeAt(0)
+        const paper = examPaperRef.current
+        if (!paper || !paper.contains(range.commonAncestorContainer)) {
+            setSelectionPopup(p => p.visible ? { ...p, visible: false } : p)
+            return
         }
 
-        // 3. Robust Offset Calculation: compute character offsets relative to container
-        try {
-            const { start, end } = getRangeOffsets(container, range);
-
-            if (start === end) {
-                setSelectionPopup(p => ({ ...p, visible: false }));
-                return;
+        // Find the nearest [data-hl-zone] ancestor inside the paper.
+        // Computing offsets relative to this specific container (not the whole paper)
+        // guarantees mark.js uses the same character counting when re-applying.
+        let ancestor = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+            ? range.commonAncestorContainer.parentElement
+            : range.commonAncestorContainer
+        let zoneEl = paper
+        let zone = 'paper'
+        while (ancestor && ancestor !== paper) {
+            if (ancestor.dataset?.hlZone) {
+                zone = ancestor.dataset.hlZone
+                zoneEl = ancestor
+                break
             }
-
-            savedOffsetsRef.current = { start, end, text: selectedText };
-
-            // 4. Position the popup above or below the selection
-            const rect = range.getBoundingClientRect();
-            const popupX = Math.min(Math.max(rect.left + rect.width / 2, 110), window.innerWidth - 110);
-            
-            // If near top (less than 130px from top of viewport), show popup BELOW the selection
-            const showBelow = rect.top < 130;
-            const popupY = showBelow ? rect.bottom : rect.top;
-            
-            setSelectionPopup({ 
-                visible: true, 
-                x: popupX, 
-                y: popupY, 
-                position: showBelow ? 'below' : 'above' 
-            });
-        } catch (err) {
-            console.warn('Highlight selection failed:', err);
-            setSelectionPopup(p => ({ ...p, visible: false }));
+            ancestor = ancestor.parentElement
         }
-    }, []);
+
+        let offsets
+        try {
+            offsets = getRangeOffsets(zoneEl, range)
+        } catch {
+            return
+        }
+        const { start, end } = offsets
+        if (start >= end) return
+        savedOffsetsRef.current = { start, end, zone }
+
+        const rects = range.getClientRects()
+        if (rects.length === 0) return
+        const rect = rects[rects.length - 1]
+        const popupX = Math.min(Math.max(rect.left + rect.width / 2, 120), window.innerWidth - 120)
+        const below = rect.bottom + 54 > window.innerHeight
+        const popupY = below ? rect.top : rect.bottom
+        setSelectionPopup({ visible: true, x: popupX, y: popupY, position: below ? 'above' : 'below' })
+    }, [])
+
+    useEffect(() => {
+        window.addEventListener('mouseup', handleGlobalMouseUp)
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp)
+    }, [handleGlobalMouseUp])
 
     const applyHighlight = useCallback((color = 'yellow') => {
-        const selection = window.getSelection();
-        if (!selection.rangeCount || !savedOffsetsRef.current) return;
-
-        const { start, end, text } = savedOffsetsRef.current;
-        const range = selection.getRangeAt(0);
-
-        try {
-            // ── USER REQUESTED 4-STEP ALGORITHM ──
-            // 1. selection range already defined above
-            // 2. Extract contents
-            const fragment = range.extractContents();
-            
-            // 3. Wrap in element
-            const mark = document.createElement("mark");
-            mark.className = `ip-text-highlight ip-hl-${color}`;
-            mark.dataset.mockHl = "true";
-            mark.dataset.start = String(start);
-            mark.dataset.end = String(end);
-            mark.title = 'Click to remove';
-            mark.appendChild(fragment);
-
-            // 4. Insert back
-            range.insertNode(mark);
-            
-            // 5. Sync to State for persistence
-            setHighlights(prev => {
-                const existing = prev[currentSectionKey] || [];
-                const filtered = existing.filter(h => h.end <= start || h.start >= end);
-                const updated = { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] };
-                localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
-                return updated;
-            });
-        } catch (e) {
-            console.error("Highlighting error:", e);
-            // Fallback for extremely complex selections
-            setHighlights(prev => {
-                const existing = prev[currentSectionKey] || [];
-                const filtered = existing.filter(h => h.end <= start || h.start >= end);
-                const updated = { ...prev, [currentSectionKey]: [...filtered, { start, end, color, text }] };
-                localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
-                return updated;
-            });
-        }
-
-        savedOffsetsRef.current = null;
-        setSelectionPopup(p => ({ ...p, visible: false }));
-        if (window.getSelection) {
-            const sel = window.getSelection();
-            if (sel.empty) sel.empty();
-            else if (sel.removeAllRanges) sel.removeAllRanges();
-        }
-    }, [currentSectionKey, id]);
-
-    // Remove any highlights that overlap the current selection without adding a new color
-    const eraseHighlight = useCallback(() => {
         if (!savedOffsetsRef.current) return
-        const { start, end } = savedOffsetsRef.current
+        const { start, end, zone = 'paper' } = savedOffsetsRef.current
         setHighlights(prev => {
             const existing = prev[currentSectionKey] || []
-            return { ...prev, [currentSectionKey]: existing.filter(h => h.end <= start || h.start >= end) }
+            // Remove overlapping highlights within the same zone only
+            const filtered = existing.filter(h => {
+                if ((h.zone || 'paper') !== zone) return true
+                return h.end <= start || h.start >= end
+            })
+            return { ...prev, [currentSectionKey]: [...filtered, { start, end, color, zone }] }
         })
         savedOffsetsRef.current = null
+        window.getSelection()?.removeAllRanges()
         setSelectionPopup(p => ({ ...p, visible: false }))
-        if (window.getSelection) {
-            const sel = window.getSelection();
-            if (sel.empty) sel.empty();
-            else if (sel.removeAllRanges) sel.removeAllRanges();
-        }
     }, [currentSectionKey])
 
-    // Click on a highlight mark → remove it from state
-    const handleHighlightClick = useCallback((e) => {
-        const mark = e.target.closest('mark[data-mock-hl]')
+    const handleMarkClick = useCallback((e) => {
+        const mark = e.target.closest('mark.ip-text-highlight')
         if (!mark) return
-        
-        const start = parseInt(mark.dataset.start)
-        const end = parseInt(mark.dataset.end)
-        
-        if (isNaN(start) || isNaN(end)) return
-
+        const idx = parseInt(mark.dataset.hl, 10)
+        if (isNaN(idx)) return
         setHighlights(prev => {
             const existing = prev[currentSectionKey] || []
-            const updated = { ...prev, [currentSectionKey]: existing.filter(h => h.start !== start || h.end !== end) }
-            localStorage.setItem(`exam_highlights_${id}`, JSON.stringify(updated));
-            return updated;
+            return { ...prev, [currentSectionKey]: existing.filter((_, i) => i !== idx) }
         })
         e.stopPropagation()
-    }, [currentSectionKey, id])
-
-    // Global click listener for highlight removal is now handled via inline onClick on the body
+    }, [currentSectionKey])
 
     // ── Part label ────────────────────────────────────────────────────────────
     const getPartLabel = (mod, idx) => {
@@ -967,12 +901,12 @@ export default function IELTSExamPage() {
 
             {/* ── BODY ── */}
             <div className="ip-body">
-                <div 
+                <div
                     ref={examPaperRef}
-                    onMouseUp={handleGlobalMouseUp}
-                    onClick={handleHighlightClick}
+                    onClick={handleMarkClick}
                     className={[
                     'ip-paper',
+                    'ip-highlightable',
                     isListening ? 'ip-paper-listening' : '',
                     isReading ? 'reading-layout' : '',
                     isWriting ? 'writing-layout' : '',
@@ -1030,11 +964,11 @@ export default function IELTSExamPage() {
 
                                 if (section?.passageContent) {
                                     return (
-                                        <div className="ip-listening-split">
+                                        <div className="ip-listening-split ip-highlightable">
                                             <div className="ip-listening-left">
                                                 {/* 1. Instructions first */}
                                                 {section?.instructions && (
-                                                    <p className="ip-listening-instr-label"
+                                                    <p className="ip-listening-instr-label ip-highlightable"
                                                        dangerouslySetInnerHTML={{ __html: section.instructions }} />
                                                 )}
                                                 {/* 2. Image after instructions */}
@@ -1047,9 +981,9 @@ export default function IELTSExamPage() {
                                                 )}
                                                 {/* 3. Passage (highlightable) */}
                                                 <div
-                                                    ref={highlightContainerRef}
+                                                    ref={contentHtmlRef}
                                                     className="ip-context-box ip-highlightable"
-                                                    dangerouslySetInnerHTML={{ __html: section.passageContent || 'No content' }}
+                                                    data-hl-zone="context"
                                                 />
 
                                             </div>
@@ -1061,13 +995,13 @@ export default function IELTSExamPage() {
                                 }
 
                                 return (
-                                    <div className="ip-listening-full">
+                                    <div className="ip-listening-full ip-highlightable">
                                         {/* 1. Instructions as highlightable text — student can mark key words */}
                                         {instrPlainText && (
                                             <div
-                                                ref={highlightContainerRef}
+                                                ref={contentHtmlRef}
                                                 className="ip-listening-instr-hl ip-highlightable"
-                                                dangerouslySetInnerHTML={{ __html: instrPlainText || 'No content' }}
+                                                data-hl-zone="context"
                                             />
                                         )}
 
@@ -1096,14 +1030,14 @@ export default function IELTSExamPage() {
 
                                 </div>
                                 <div
-                                    ref={highlightContainerRef}
+                                    ref={contentHtmlRef}
                                     className="ip-passage-text ip-highlightable"
+                                    data-hl-zone="passage"
                                     onCopy={e => e.preventDefault()}
                                     onContextMenu={e => e.preventDefault()}
-                                    dangerouslySetInnerHTML={{ __html: section?.passageContent || 'Passage content not available.' }}
                                 />
                             </div>
-                            <div className="ip-questions-col">
+                            <div className="ip-questions-col" data-hl-zone="questions">
                                 {renderQuestions()}
                             </div>
                         </div>
@@ -1138,7 +1072,7 @@ export default function IELTSExamPage() {
 
                     {/* ── WRITING ── */}
                     {isWriting && (
-                        <div className="ip-writing-split">
+                        <div className="ip-writing-split ip-highlightable">
                             <div className="ip-task-col">
                                 <h2 className="ip-task-heading">{section?.title}</h2>
                                 {(() => {
@@ -1148,13 +1082,13 @@ export default function IELTSExamPage() {
                                         ? 'Task 1: You should spend about 20 minutes on this task. Write at least 150 words.'
                                         : 'Task 2: You should spend about 40 minutes on this task. Write at least 250 words.'
                                     return plainInstr
-                                        ? <div className="ip-task-instructions" dangerouslySetInnerHTML={{ __html: rawInstr }} />
+                                        ? <div className="ip-task-instructions ip-highlightable" dangerouslySetInnerHTML={{ __html: rawInstr }} />
                                         : <p className="ip-task-instructions">{fallback}</p>
                                 })()}
                                 <div
-                                    ref={highlightContainerRef}
+                                    ref={contentHtmlRef}
                                     className="ip-task-prompt ip-highlightable"
-                                    dangerouslySetInnerHTML={{ __html: section?.passageContent || 'No task description provided.' }}
+                                    data-hl-zone="task"
                                 />
                                 {section?.media?.filter(m => m.type === 'image').map((img, i) => (
                                     <img key={i} src={img.url} alt="Task visual" className="ip-task-image" />
@@ -1277,20 +1211,15 @@ export default function IELTSExamPage() {
                         <button
                             key={c}
                             className={`ip-hl-dot ip-hl-dot--${c}`}
+                            onMouseDown={e => e.preventDefault()}
                             onClick={() => applyHighlight(c)}
                             title={c.charAt(0).toUpperCase() + c.slice(1)}
                         />
                     ))}
                     <div className="ip-hl-popup-divider" />
                     <button
-                        className="ip-selection-popup-btn ip-selection-popup-btn--erase"
-                        onClick={eraseHighlight}
-                        title="Remove highlight"
-                    >⌫</button>
-                    <button
                         className="ip-selection-popup-btn ip-selection-popup-btn--close"
                         onClick={() => {
-                            savedOffsetsRef.current = null
                             setSelectionPopup(p => ({ ...p, visible: false }))
                         }}
                         title="Cancel"
@@ -1323,236 +1252,6 @@ export default function IELTSExamPage() {
                     </div>
                 </div>
             )}
-        </div>
-    )
-}
-
-// ── Speaking Recorder component ───────────────────────────────────────────────
-function SpeakingRecorder({
-    sectionIdx,
-    speakingRecording, setSpeakingRecording,
-    speakingAudios, setSpeakingAudios,
-    speakingDurations, setSpeakingDurations,
-    speakingPlayIdx, setSpeakingPlayIdx,
-    speakingRecorderRef, speakingChunksRef, speakingPlaybackRef,
-    onUploaded,
-}) {
-    const [elapsed, setElapsed] = useState(0)
-    const [micError, setMicError] = useState('')
-    const [uploading, setUploading] = useState(false)
-    const timerRef = useRef(null)
-    const elapsedRef = useRef(0)  // always current, readable inside onstop closure
-
-    const blobUrl = speakingAudios[sectionIdx]
-    const duration = speakingDurations[sectionIdx] || 0
-    const isPlaying = speakingPlayIdx === sectionIdx
-
-    const fmt = (s) => {
-        const m = Math.floor(s / 60), sec = s % 60
-        return `${m}:${String(sec).padStart(2, '0')}`
-    }
-
-    const startRecording = async () => {
-        setMicError('')
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            speakingChunksRef.current = []
-            const mr = new MediaRecorder(stream)
-            speakingRecorderRef.current = mr
-
-            mr.ondataavailable = e => speakingChunksRef.current.push(e.data)
-            mr.onstop = async () => {
-                const blob = new Blob(speakingChunksRef.current, { type: 'audio/webm' })
-                const localUrl = URL.createObjectURL(blob)
-                if (speakingAudios[sectionIdx]) URL.revokeObjectURL(speakingAudios[sectionIdx])
-                setSpeakingAudios(p => ({ ...p, [sectionIdx]: localUrl }))
-                setSpeakingDurations(p => ({ ...p, [sectionIdx]: elapsedRef.current }))
-                stream.getTracks().forEach(t => t.stop())
-
-                // Upload to server so it persists with the submission
-                setUploading(true)
-                try {
-                    const fd = new FormData()
-                    fd.append('audio', new File([blob], `speaking_part${sectionIdx}.webm`, { type: 'audio/webm' }))
-                    const res = await fetch(`${BASE}/speaking/upload`, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
-                        body: fd,
-                    })
-                    const data = await res.json()
-                    if (data.url) onUploaded?.(data.url)
-                } catch {
-                    // upload failed — recording still available locally
-                } finally {
-                    setUploading(false)
-                }
-            }
-
-            mr.start()
-            setSpeakingRecording(true)
-            elapsedRef.current = 0
-            setElapsed(0)
-            timerRef.current = setInterval(() => {
-                elapsedRef.current += 1
-                setElapsed(p => p + 1)
-            }, 1000)
-        } catch {
-            setMicError('Microphone access denied. Please allow microphone and try again.')
-        }
-    }
-
-    const stopRecording = () => {
-        speakingRecorderRef.current?.stop()
-        setSpeakingRecording(false)
-        clearInterval(timerRef.current)
-    }
-
-    const togglePlay = () => {
-        if (!speakingPlaybackRef.current) return
-        if (isPlaying) {
-            speakingPlaybackRef.current.pause()
-            setSpeakingPlayIdx(null)
-        } else {
-            speakingPlaybackRef.current.play()
-            setSpeakingPlayIdx(sectionIdx)
-        }
-    }
-
-    const deleteRecording = () => {
-        if (isPlaying) {
-            speakingPlaybackRef.current?.pause()
-            setSpeakingPlayIdx(null)
-        }
-        if (speakingAudios[sectionIdx]) URL.revokeObjectURL(speakingAudios[sectionIdx])
-        setSpeakingAudios(p => { const n = { ...p }; delete n[sectionIdx]; return n })
-        setSpeakingDurations(p => { const n = { ...p }; delete n[sectionIdx]; return n })
-    }
-
-    useEffect(() => () => clearInterval(timerRef.current), [])
-
-    return (
-        <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-            {micError && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#dc2626' }}>
-                    {micError}
-                </div>
-            )}
-
-            {/* Mic card */}
-            <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-
-                {/* Animated mic icon */}
-                <div style={{ position: 'relative', width: 72, height: 72 }}>
-                    {speakingRecording && (
-                        <span style={{
-                            position: 'absolute', inset: -8,
-                            borderRadius: '50%', border: '3px solid #dc2626',
-                            animation: 'sp-pulse 1s ease-in-out infinite',
-                        }} />
-                    )}
-                    <div style={{
-                        width: 72, height: 72, borderRadius: '50%',
-                        background: speakingRecording ? '#dc2626' : blobUrl ? '#059669' : '#f1f5f9',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 30, transition: 'background 0.3s',
-                    }}>
-                        🎤
-                    </div>
-                </div>
-
-                {/* Timer / status */}
-                <div style={{ textAlign: 'center' }}>
-                    {speakingRecording ? (
-                        <>
-                            <div style={{ fontSize: 30, fontWeight: 800, color: '#dc2626', fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}>
-                                {fmt(elapsed)}
-                            </div>
-                            <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, letterSpacing: '0.1em', marginTop: 2 }}>
-                                ● RECORDING
-                            </div>
-                        </>
-                    ) : blobUrl ? (
-                        <>
-                            <div style={{ fontSize: 16, fontWeight: 700, color: '#059669' }}>
-                                {uploading ? 'Uploading…' : 'Recording saved ✓'}
-                            </div>
-                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                                {uploading ? 'Saving to server…' : `${fmt(duration)} recorded`}
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>Ready to record</div>
-                            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Press the button below to start</div>
-                        </>
-                    )}
-                </div>
-
-                {/* Record / Stop */}
-                {!speakingRecording ? (
-                    <button
-                        onClick={startRecording}
-                        style={{
-                            background: '#dc2626', color: '#fff', border: 'none',
-                            borderRadius: 8, padding: '11px 32px', fontSize: 14,
-                            fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                    >
-                        {blobUrl ? '🔴 Re-record' : '🔴 Start Recording'}
-                    </button>
-                ) : (
-                    <button
-                        onClick={stopRecording}
-                        style={{
-                            background: '#1e293b', color: '#fff', border: 'none',
-                            borderRadius: 8, padding: '11px 32px', fontSize: 14,
-                            fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                    >
-                        ⏹ Stop Recording
-                    </button>
-                )}
-            </div>
-
-            {/* Playback bar */}
-            {blobUrl && (
-                <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <audio
-                        ref={speakingPlaybackRef}
-                        src={blobUrl}
-                        onEnded={() => setSpeakingPlayIdx(null)}
-                    />
-                    <button
-                        onClick={togglePlay}
-                        style={{
-                            width: 38, height: 38, borderRadius: '50%',
-                            background: '#059669', color: '#fff', border: 'none',
-                            fontSize: 16, cursor: 'pointer', flexShrink: 0,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}
-                    >
-                        {isPlaying ? '⏸' : '▶'}
-                    </button>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>Your recording</div>
-                        <div style={{ fontSize: 12, color: '#15803d' }}>{fmt(duration)}</div>
-                    </div>
-                    <button
-                        onClick={deleteRecording}
-                        style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#dc2626', cursor: 'pointer' }}
-                    >
-                        🗑 Delete
-                    </button>
-                </div>
-            )}
-
-            <style>{`
-                @keyframes sp-pulse {
-                    0%, 100% { transform: scale(1); opacity: 0.6; }
-                    50%       { transform: scale(1.18); opacity: 0.2; }
-                }
-            `}</style>
         </div>
     )
 }

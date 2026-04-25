@@ -101,6 +101,7 @@ function AIHero({ isSpeakingTTS, isLoadingTTS, sectionTitle, onAvatarClick, titl
 export default function SpeakingHero({
     section,
     sectionIdx,
+    highlightContainerRef,
     speakingRecording,    setSpeakingRecording,
     speakingAudios,       setSpeakingAudios,
     speakingDurations,    setSpeakingDurations,
@@ -536,7 +537,7 @@ export default function SpeakingHero({
         }
 
         return (
-            <div className="sh-root sh-root--p2">
+            <div className="sh-root sh-root--p2 ip-highlightable">
                 {isAdmin && <div className="sh-admin-badge">Admin Preview Mode</div>}
 
 
@@ -566,7 +567,11 @@ export default function SpeakingHero({
                                 <Clock size={11} style={{ display: 'inline', marginRight: 3 }} />
                                 Topic Card
                             </div>
-                            <div className="sh-cuecard-body" dangerouslySetInnerHTML={{ __html: section.passageContent }} />
+                            <div 
+                                ref={highlightContainerRef} 
+                                className="sh-cuecard-body ip-highlightable" 
+                                dangerouslySetInnerHTML={{ __html: section.passageContent }} 
+                            />
                         </div>
                     )}
                     {/* Note card only appears after "Start Preparation" is clicked */}

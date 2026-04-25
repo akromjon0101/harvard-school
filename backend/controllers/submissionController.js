@@ -380,6 +380,9 @@ export const getSubmissionById = async (req, res) => {
 
 export const deleteSubmission = async (req, res) => {
     try {
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
         await Submission.findByIdAndDelete(req.params.id);
         res.json({ message: 'Submission deleted' });
     } catch (error) {

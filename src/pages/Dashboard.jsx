@@ -9,7 +9,8 @@ export default function Dashboard() {
   const [exams, setExams] = useState([])
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  let user = {}
+  try { user = JSON.parse(localStorage.getItem('user') || '{}') } catch { /* corrupted */ }
 
   useEffect(() => {
     if (!user.role) {
@@ -21,7 +22,7 @@ export default function Dashboard() {
       try {
         const [examsData, resultsData] = await Promise.all([
           api('/exams'),
-          api(`/submissions/user/${user.id}`)
+          api(`/submissions/user/${user.id || user._id}`)
         ])
         setExams(examsData)
         setResults(resultsData)
@@ -32,7 +33,7 @@ export default function Dashboard() {
       }
     }
     fetchData()
-  }, [user.id])
+  }, [user.id, user._id])
 
   return (
     <div className="dashboard-wrapper">

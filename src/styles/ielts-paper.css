@@ -1992,6 +1992,14 @@
   text-decoration: underline wavy #e11d48;
 }
 
+/* Marks that land inside buttons should not visually alter the button */
+button .ip-text-highlight {
+  background: transparent !important;
+  border-bottom: none !important;
+  padding: 0;
+  cursor: inherit;
+}
+
 /* ── Colour variants ─────────────────────────────────────────────── */
 .ip-hl-yellow {
   background: #fef9c3;
@@ -2057,14 +2065,14 @@
   position: fixed;
   transform: translateX(-50%); /* Handle horizontal centering only */
   background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid #52525b;
   border-radius: 10px;
-  padding: 6px 8px;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
-  z-index: 9999;
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 99999;
   pointer-events: all;
 }
 

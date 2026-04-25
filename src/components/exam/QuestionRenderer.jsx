@@ -11,7 +11,7 @@ import ChooseFromBox from './ChooseFromBox';
 import TrueFalseNotGiven from './TrueFalseNotGiven';
 
 const QuestionRenderer = ({
-    type, data, value, onChange, qNumber, hideInstruction,
+    type, data, value, onChange, qNumber, hideInstruction, modifiedHtml,
 }) => {
 
     // Shared formatting for MCQ/Matching
@@ -147,7 +147,13 @@ const QuestionRenderer = ({
     // Render instruction + question text as highlightable zone
     const renderTextZone = () => {
         const showInstr = !hideInstruction && !!data.instructionText
-        if (!showInstr && !showQTextInZone) return null
+        if (!showInstr && !showQTextInZone && !modifiedHtml) return null
+
+        if (modifiedHtml) {
+            return (
+                <div className="ip-text-zone ip-highlightable" dangerouslySetInnerHTML={{ __html: modifiedHtml }} />
+            )
+        }
 
         return (
             <div className="ip-text-zone ip-highlightable">
@@ -162,7 +168,7 @@ const QuestionRenderer = ({
     }
 
     return (
-        <div className="ielts-question-block-container">
+        <div className="ielts-question-block-container ip-highlightable">
             {renderTextZone()}
             {data.image && (
                 <div className="q-block-image-holder" style={{ marginBottom: '20px', textAlign: 'center' }}>

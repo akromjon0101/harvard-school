@@ -7,7 +7,8 @@ export default function MyResults() {
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(true)
     const navigate = useNavigate()
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    let user = {}
+    try { user = JSON.parse(localStorage.getItem('user') || '{}') } catch { /* corrupted */ }
 
     useEffect(() => {
         const userId = user.id || user._id

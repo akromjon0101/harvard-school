@@ -14,7 +14,8 @@ import '../styles/navbar.css'
 export default function Navbar() {
     const navigate  = useNavigate()
     const location  = useLocation()
-    const user      = JSON.parse(localStorage.getItem('user') || 'null')
+    let user = null
+    try { user = JSON.parse(localStorage.getItem('user') || 'null') } catch { /* corrupted */ }
     const [dropOpen, setDropOpen] = useState(false)
     const dropRef   = useRef(null)
 

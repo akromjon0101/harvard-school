@@ -31,11 +31,11 @@ const sendTokenResponse = (user, statusCode, res) => {
 
 export const register = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password } = req.body;
         let user = await User.findOne({ email });
         if (user) return res.status(400).json({ error: 'User already exists' });
 
-        user = new User({ name, email, password, role: role || 'student' });
+        user = new User({ name, email, password, role: 'student' });
         await user.save();
 
         sendTokenResponse(user, 201, res);

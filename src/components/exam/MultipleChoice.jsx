@@ -10,7 +10,7 @@ const MultipleChoice = ({ data = {}, value, onChange, qNumber, hideQuestionText 
                 <div className="q-num-text-flex">
                     <span className="q-num-square">{qNumber}</span>
                     {!hideQuestionText && questionText && (
-                        <p className="q-text-bold" dangerouslySetInnerHTML={{ __html: questionText }} />
+                        <p className="q-text-bold ip-highlightable" dangerouslySetInnerHTML={{ __html: questionText }} />
                     )}
                 </div>
                 <div className="ielts-options-grid">
@@ -24,7 +24,7 @@ const MultipleChoice = ({ data = {}, value, onChange, qNumber, hideQuestionText 
                                 onClick={() => onChange(letter)}
                             >
                                 <span className="opt-circle">{letter}</span>
-                                <span className="opt-label-text" dangerouslySetInnerHTML={{ __html: opt }} />
+                                <span className="opt-label-text ip-highlightable" dangerouslySetInnerHTML={{ __html: opt }} />
                             </div>
                         );
                     })}

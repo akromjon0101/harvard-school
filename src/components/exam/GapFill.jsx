@@ -35,7 +35,7 @@ const GapFill = ({ data = {}, value = {}, onChange, startNumber, qNumber }) => {
                         <p key={lineIdx} className="ip-gapfill-line">
                             {parts.map((part, pIdx) => (
                                 <React.Fragment key={pIdx}>
-                                    <span dangerouslySetInnerHTML={{ __html: part }} className="ip-highlightable-part" />
+                                    <span dangerouslySetInnerHTML={{ __html: part }} className="ip-highlightable" />
                                     {pIdx < gapNums.length && (
                                         <span className="ip-gap-inline">
                                             <span className="ip-gap-num">{gapNums[pIdx]}</span>
