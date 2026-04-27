@@ -1,14 +1,12 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 
-// Content-editable rich text editor with Bold, Italic, Underline and font-size controls.
-// Stores content as HTML so formatting persists across saves.
+// Content-editable rich text editor with Bold-only toolbar.
 export default function RichTextEditor({ value, onChange, placeholder, rows = 3, className = '' }) {
   const ref = useRef(null);
   const isFocusedRef = useRef(false);
   const lastValueRef = useRef(value);
   const savedRangeRef = useRef(null);
 
-  // Sync external value → DOM (only when not focused, to avoid cursor jumping)
   useEffect(() => {
     if (ref.current && !isFocusedRef.current && value !== lastValueRef.current) {
       ref.current.innerHTML = value || '';
@@ -16,7 +14,6 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
     }
   }, [value]);
 
-  // Set initial content on mount
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = value || '';
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -38,144 +35,23 @@ export default function RichTextEditor({ value, onChange, placeholder, rows = 3,
     }
   };
 
-  const exec = (cmd, val) => {
-    restoreSelection();
-    document.execCommand(cmd, false, val ?? undefined);
-    handleChange();
-  };
-
   const handleChange = useCallback(() => {
     const html = ref.current?.innerHTML || '';
     lastValueRef.current = html;
     onChange(html);
   }, [onChange]);
 
-  const handleFontSize = (e) => {
-    const size = e.target.value;
-    if (!size) return;
-    exec('fontSize', size);
-    e.target.value = '';
+  const toggleBold = () => {
+    restoreSelection();
+    document.execCommand('bold', false, undefined);
+    handleChange();
   };
 
   return (
     <div className={`rte-wrapper ${className}`}>
       <div className="rte-toolbar" onMouseDown={e => { e.preventDefault(); saveSelection(); }}>
-        {/* Bold */}
-        <button type="button" className="rte-btn rte-bold" onClick={() => exec('bold')} title="Bold (Ctrl+B)">
+        <button type="button" className="rte-btn rte-bold" onClick={toggleBold} title="Bold (Ctrl+B)">
           <b>B</b>
-        </button>
-        {/* Italic */}
-        <button type="button" className="rte-btn rte-italic" onClick={() => exec('italic')} title="Italic (Ctrl+I)">
-          <i>I</i>
-        </button>
-        {/* Underline */}
-        <button type="button" className="rte-btn" onClick={() => exec('underline')} title="Underline (Ctrl+U)">
-          <u>U</u>
-        </button>
-
-        <div className="rte-divider" />
-
-        {/* Font size dropdown */}
-        <select
-          className="rte-size-sel"
-          onMouseDown={saveSelection}
-          onChange={handleFontSize}
-          defaultValue=""
-          title="Font size"
-        >
-          <option value="" disabled>Size</option>
-          <option value="1">XS</option>
-          <option value="2">Small</option>
-          <option value="3">Normal</option>
-          <option value="4">Medium</option>
-          <option value="5">Large</option>
-          <option value="6">XL</option>
-          <option value="7">XXL</option>
-        </select>
-
-        <div className="rte-divider" />
-
-        {/* Quick font-size increase/decrease */}
-        <button
-          type="button"
-          className="rte-btn"
-          title="Increase font size"
-          onClick={() => {
-            restoreSelection();
-            // execCommand('fontSize') wraps in <font size="N">, so read from that element
-            const fontEl = window.getSelection()?.getRangeAt(0)
-              ?.startContainer?.parentElement?.closest('font');
-            const curSize = fontEl ? (parseInt(fontEl.getAttribute('size')) || 3) : 3;
-            exec('fontSize', String(Math.min(7, curSize + 1)));
-          }}
-        >A+</button>
-        <button
-          type="button"
-          className="rte-btn"
-          title="Decrease font size"
-          onClick={() => {
-            restoreSelection();
-            const fontEl = window.getSelection()?.getRangeAt(0)
-              ?.startContainer?.parentElement?.closest('font');
-            const curSize = fontEl ? (parseInt(fontEl.getAttribute('size')) || 3) : 3;
-            exec('fontSize', String(Math.max(1, curSize - 1)));
-          }}
-        >A-</button>
-
-        <div className="rte-divider" />
-
-        <div className="rte-divider" />
-
-        {/* Bold first sentence */}
-        <button
-          type="button"
-          className="rte-btn"
-          title="Bold first sentence"
-          onClick={() => {
-            if (!ref.current) return;
-            const text = ref.current.textContent || '';
-            const end = text.search(/[.!?](\s|$)/);
-            if (end < 0) return;
-            const range = document.createRange();
-            const walker = document.createTreeWalker(ref.current, NodeFilter.SHOW_TEXT, null, false);
-            let accumulated = 0;
-            let startNode = null, endNode = null, endOff = 0;
-            let n = walker.nextNode();
-            while (n) {
-              const len = n.nodeValue.length;
-              if (!startNode) { startNode = n; }
-              if (accumulated + len > end) {
-                endNode = n;
-                endOff = end + 1 - accumulated;
-                break;
-              }
-              accumulated += len;
-              n = walker.nextNode();
-            }
-            if (!startNode || !endNode) return;
-            try {
-              range.setStart(startNode, 0);
-              range.setEnd(endNode, endOff);
-              const sel = window.getSelection();
-              sel.removeAllRanges();
-              sel.addRange(range);
-              document.execCommand('bold', false, undefined);
-              sel.removeAllRanges();
-              handleChange();
-            } catch { /* ignore */ }
-          }}
-        >B1</button>
-
-        <div className="rte-divider" />
-
-        {/* Clear all formatting */}
-        <button
-          type="button"
-          className="rte-btn rte-clear"
-          onClick={() => { exec('removeFormat'); exec('unlink'); }}
-          title="Remove formatting"
-        >
-          ✕
         </button>
       </div>
 
