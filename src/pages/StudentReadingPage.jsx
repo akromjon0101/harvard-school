@@ -519,11 +519,19 @@ function SummaryCompletion({ group, answers, onAnswer }) {
 
 function QuestionRow({ question, answer, isFlagged, onAnswer, onFlag, headingsList, isTFNG, isYNNG, isInfo }) {
   const isAnswered = answer !== undefined && answer !== '' && !(Array.isArray(answer) && answer.length === 0)
+  // Strip HTML tags from question text and preserve line breaks
+  const stripHtml = (html) => {
+    if (!html) return '';
+    let text = html.replace(/<[^>]+>/g, '');
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    return text;
+  };
+
   return (
     <div className={`question-item ${isFlagged ? 'flagged-row' : ''}`}>
       {/* Sidebar: number box + flag */}
       <div className="q-sidebar">
-        <div className={`q-number-box ${isAnswered ? 'answered' : ''}`}>
+        <div className={`q-number-box ${isAnswered ? 'answered' : ''}`}> 
           {question.questionNumber}
         </div>
         <button
@@ -538,7 +546,9 @@ function QuestionRow({ question, answer, isFlagged, onAnswer, onFlag, headingsLi
       {/* Question content */}
       <div className="q-main">
         {question.questionText && (
-          <p>{question.questionText}</p>
+          stripHtml(question.questionText).split('\n').map((line, idx) => (
+            <p key={idx}>{line}</p>
+          ))
         )}
         <QuestionInput
           question={question}
