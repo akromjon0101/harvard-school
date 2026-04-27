@@ -35,7 +35,17 @@ const QuestionRenderer = ({
         }
         let html = '';
         if (showInstr)       html += `<div class="ip-content-instructions">${data.instructionText}</div>`;
-        if (showQTextInZone) html += `<p class="q-text-bold">${data.questionText}</p>`;
+        // Render questionText as plain text, preserving <br> if present
+        if (showQTextInZone && data.questionText) {
+            // If questionText contains HTML tags, strip them and replace <br> with newlines
+            let plain = data.questionText.replace(/<[^>]+>/g, '');
+            // Replace <br> and <br/> with newlines
+            plain = plain.replace(/<br\s*\/?>/gi, '\n');
+            // Escape HTML special chars
+            plain = plain.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // Convert newlines to <br>
+            html += `<p class=\"q-text-bold\">${plain.replace(/\n/g, '<br/>')}</p>`;
+        }
         textZoneRef.current.innerHTML = html;
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // instruction/question text is static exam data — set once on mount
