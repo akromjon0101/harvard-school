@@ -15,24 +15,32 @@ export default function AdminLogin() {
         setError('')
         setLoading(true)
         try {
+            const trimmedEmail = email.trim();
+            const trimmedPassword = password.trim();
+
             const res = await fetch(`${BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email: trimmedEmail, password: trimmedPassword })
             });
 
             const data = await res.json();
 
-            if (!res.ok) throw new Error(data.error || 'Login failed');
+            if (!res.ok) {
+                console.error('Login error response:', data);
+                throw new Error(data.error || 'Login failed');
+            }
 
-            if (data.user.role !== 'admin') {
+            if (!data.user || data.user.role !== 'admin') {
+                console.error('User role check failed:', data.user);
                 throw new Error('Access denied. Admin privileges required.');
             }
 
             localStorage.setItem('user', JSON.stringify(data.user));
             navigate('/admin');
         } catch (err) {
+            console.error('Login attempt failed:', err);
             if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
                 setError('Server bilan ulanib bo\'lmadi. Backend ishlaayotganini tekshiring.')
             } else {
@@ -50,6 +58,10 @@ export default function AdminLogin() {
                     <div className="auth-logo">🔐</div>
                     <h2>Admin Specialist Portal</h2>
                     <p>Official access for IELTS Mock system management.</p>
+                </div>
+                <div style={{ margin: '0 0 15px 0', padding: '10px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#475569', textAlign: 'center' }}>
+                    <strong>Test Admin:</strong> admin@gmail.com <br />
+                    <strong>Password:</strong> Admin@2026!SecurePass
                 </div>
                 {error && <div style={{ color: '#e11d48', background: '#fff1f2', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>{error}</div>}
                 <form onSubmit={handleLogin} className="auth-form">

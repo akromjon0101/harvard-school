@@ -20,7 +20,7 @@ const QuestionRenderer = ({
     };
 
     // Types whose questionText is shown in the text zone (not inside the component)
-    const QTEXT_IN_ZONE = ['mcq', 'mcq-single', 'mcq-multi', 'mcq-multiple', 'checkbox', 'tfng', 'true-false-notgiven'];
+    const QTEXT_IN_ZONE = ['mcq', 'mcq-single', 'mcq-multi', 'mcq-multiple', 'checkbox'];
     const showQTextInZone = QTEXT_IN_ZONE.includes(type) && !!data.questionText;
     const showInstr = !hideInstruction && !!data.instructionText;
     const hasTextZone = !!(modifiedHtml || showInstr || showQTextInZone);
@@ -47,8 +47,7 @@ const QuestionRenderer = ({
             html += `<p class=\"q-text-bold\">${plain.replace(/\n/g, '<br/>')}</p>`;
         }
         textZoneRef.current.innerHTML = html;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // instruction/question text is static exam data — set once on mount
+    }, [modifiedHtml, showInstr, showQTextInZone, data.instructionText, data.questionText]); // Update when data or visibility rules change
 
     const renderComponent = (hideQText = false) => {
         switch (type) {
