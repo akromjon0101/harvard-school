@@ -1,4 +1,5 @@
 import React from 'react';
+import { stripHtml } from '../../utils/highlightUtils';
 
 const ChooseFromBox = ({ data = {}, answers = {}, onChange, qNumber }) => {
     const options = data.options || [];
@@ -33,7 +34,7 @@ const ChooseFromBox = ({ data = {}, answers = {}, onChange, qNumber }) => {
                                 key={i}
                                 className={`ip-word-bank-item${isUsed ? ' used' : ''}`}
                             >
-                                <strong>{letter}</strong>&nbsp;{opt}
+                                <strong>{letter}</strong>&nbsp;{stripHtml(opt)}
                             </span>
                         );
                     })}
@@ -62,7 +63,7 @@ const ChooseFromBox = ({ data = {}, answers = {}, onChange, qNumber }) => {
                                 })}
                             </select>
                         </div>
-                        <span className="ip-cfb-text">{item}</span>
+                        <span className="ip-cfb-text">{stripHtml(item)}</span>
                     </div>
                 );
             })}

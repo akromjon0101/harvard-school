@@ -1,4 +1,5 @@
 import React from 'react';
+import { stripHtml } from '../../utils/highlightUtils';
 
 /**
  * SummaryCompletion — renders a paragraph in a shaded box with inline gap inputs.
@@ -28,7 +29,7 @@ const SummaryCompletion = ({ data = {}, answers = {}, onChange, startNumber }) =
             <div className="ip-summary-box">
                 {parts.map((part, index) => (
                     <React.Fragment key={index}>
-                        <span>{part}</span>
+                        <span>{stripHtml(part)}</span>
                         {index < parts.length - 1 && (
                             <span className="ip-gap-inline">
                                 <span className="ip-gap-num">{baseNum + index}</span>

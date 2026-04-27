@@ -1,4 +1,5 @@
 import React from 'react';
+import { stripHtml } from '../../utils/highlightUtils';
 
 const Matching = ({ data = {}, value = {}, onChange, qNumber }) => {
     const { questionText = '', options = [], matchingItems = [], instructionText } = data;
@@ -15,7 +16,7 @@ const Matching = ({ data = {}, value = {}, onChange, qNumber }) => {
             </div>
 
             {questionText && (
-                <p className="match-question-stem">{questionText}</p>
+                <p className="match-question-stem">{stripHtml(questionText)}</p>
             )}
 
             {options.length > 0 && (
@@ -23,7 +24,7 @@ const Matching = ({ data = {}, value = {}, onChange, qNumber }) => {
                     {options.map((opt, idx) => (
                         <div key={idx} className="match-opt-item-official">
                             <span className="match-opt-letter">{String.fromCharCode(65 + idx)}</span>
-                            <span className="match-opt-text">{opt}</span>
+                            <span className="match-opt-text">{stripHtml(opt)}</span>
                         </div>
                     ))}
                 </div>
@@ -35,7 +36,7 @@ const Matching = ({ data = {}, value = {}, onChange, qNumber }) => {
                     return (
                         <div key={i} className="match-row-official">
                             <span className="q-num-square">{itemNum}</span>
-                            <span className="match-item-text">{item}</span>
+                            <span className="match-item-text">{stripHtml(item)}</span>
                             <input
                                 type="text"
                                 className="match-answer-input"

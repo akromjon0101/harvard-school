@@ -1,4 +1,5 @@
 import React from 'react';
+import { stripHtml } from '../../utils/highlightUtils';
 
 /**
  * Summary with phrase bank A–J: passage has [gap] blanks, user selects one letter per blank.
@@ -27,7 +28,7 @@ const SummaryPhraseBank = ({ data = {}, answers = {}, onChange, startNumber }) =
                     <div className="ip-word-bank-title">Phrases</div>
                     {options.slice(0, 10).map((opt, i) => (
                         <span key={i} className="ip-word-bank-item">
-                            <strong>{String.fromCharCode(65 + i)}</strong>&nbsp;{opt}
+                            <strong>{String.fromCharCode(65 + i)}</strong>&nbsp;{stripHtml(opt)}
                         </span>
                     ))}
                 </div>
@@ -35,7 +36,7 @@ const SummaryPhraseBank = ({ data = {}, answers = {}, onChange, startNumber }) =
             <div className="ip-summary-box">
                 {parts.map((part, index) => (
                     <React.Fragment key={index}>
-                        <span>{part}</span>
+                        <span>{stripHtml(part)}</span>
                         {index < parts.length - 1 && (
                             <span className="ip-gap-inline">
                                 <span className="ip-gap-num">{baseNum + index}</span>

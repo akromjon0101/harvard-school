@@ -1,4 +1,5 @@
 import React from 'react';
+import { stripHtml } from '../../utils/highlightUtils';
 
 const ROMAN = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'];
 
@@ -24,7 +25,7 @@ const MatchingHeadings = ({ data = {}, answers = {}, onChange, qNumber }) => {
                     {headings.map((h, i) => (
                         <div key={i} className="ip-heading-item">
                             <span className="ip-heading-roman">{ROMAN[i] || String(i + 1)}</span>
-                            {h}
+                            {stripHtml(h)}
                         </div>
                     ))}
                 </div>
@@ -35,7 +36,7 @@ const MatchingHeadings = ({ data = {}, answers = {}, onChange, qNumber }) => {
                 return (
                     <div key={i} className="ip-match-row">
                         <span className="q-num-square">{qNum}</span>
-                        <span className="ip-match-label">{para}</span>
+                        <span className="ip-match-label">{stripHtml(para)}</span>
                         <select
                             className="ip-select"
                             value={answers[qNum] || ''}

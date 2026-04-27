@@ -1,12 +1,12 @@
 import React from 'react';
+import { stripHtmlLines } from '../../utils/highlightUtils';
 
 const DEFAULT_OPTIONS = ['TRUE', 'FALSE', 'NOT GIVEN'];
 
 const TrueFalseNotGiven = ({ data = {}, value = {}, onChange, startNumber, qNumber, hideQuestionText }) => {
     const baseNum = startNumber || qNumber || 1;
     const options = data._tfngOptions || DEFAULT_OPTIONS;
-    // If questionText is rendered in outer zone (hideQuestionText), still need statements for buttons
-    const statements = (data.questionText || '')
+    const statements = stripHtmlLines(data.questionText || '')
         .split('\n')
         .map(s => s.trim())
         .filter(Boolean);

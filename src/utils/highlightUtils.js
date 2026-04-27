@@ -15,6 +15,25 @@ export function stripHtml(html) {
   return tmp.textContent || tmp.innerText || '';
 }
 
+// Strips HTML tags and converts block-level closings (</p>, <br>) to newlines.
+// Use this when the text will be split by '\n' (e.g. TFNG statements).
+export function stripHtmlLines(html) {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
 /**
  * Calculates character offset relative to a container using a robust TreeWalker.
  * Fixed version: handles boundaries more carefully and ensures we don't return 0 for valid targets.

@@ -1,4 +1,5 @@
 import React from 'react';
+import { stripHtml } from '../../utils/highlightUtils';
 
 /**
  * TableCompletion — renders a table where cells may contain inline [gap] blanks.
@@ -51,7 +52,7 @@ const TableCompletion = ({ data = {}, answers = {}, onChange }) => {
                     {segments.map((seg, si) => (
                         <React.Fragment key={si}>
                             {seg && (
-                                <span className="ip-table-cell-text">{seg}</span>
+                                <span className="ip-table-cell-text">{stripHtml(seg)}</span>
                             )}
                             {si < qNums.length && (
                                 <span className="ip-gap-inline">
@@ -85,7 +86,7 @@ const TableCompletion = ({ data = {}, answers = {}, onChange }) => {
                     <thead>
                         <tr>
                             {headers.map((h, i) => (
-                                <th key={i}>{h}</th>
+                                <th key={i}>{stripHtml(h)}</th>
                             ))}
                         </tr>
                     </thead>
@@ -98,7 +99,7 @@ const TableCompletion = ({ data = {}, answers = {}, onChange }) => {
                                 if (qNums.length > 0) {
                                     return renderGapCell(cell, qNums, ci);
                                 }
-                                return <td key={ci}>{cell}</td>;
+                                return <td key={ci}>{stripHtml(cell)}</td>;
                             })}
                         </tr>
                     ))}
