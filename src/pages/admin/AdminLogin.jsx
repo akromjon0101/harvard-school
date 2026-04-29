@@ -37,6 +37,7 @@ export default function AdminLogin() {
                 throw new Error('Access denied. Admin privileges required.');
             }
 
+            localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             navigate('/admin');
         } catch (err) {
