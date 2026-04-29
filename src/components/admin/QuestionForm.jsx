@@ -159,6 +159,31 @@ const QuestionForm = ({ question, onChange, activeModule }) => {
                     )}
                 </div>
 
+                {question.type === 'tfng' && (
+                    <div style={{ marginTop: '14px' }}>
+                        <label className="input-label-premium">Answer Format</label>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                            {[
+                                { label: 'True / False / Not Given', vals: ['TRUE', 'FALSE', 'NOT GIVEN'] },
+                                { label: 'Yes / No / Not Given', vals: ['YES', 'NO', 'NOT GIVEN'] },
+                                { label: 'True / False', vals: ['TRUE', 'FALSE'] },
+                            ].map(preset => (
+                                <button
+                                    key={preset.label}
+                                    type="button"
+                                    style={{
+                                        padding: '6px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', border: '1px solid',
+                                        background: JSON.stringify(question._tfngOptions || ['TRUE', 'FALSE', 'NOT GIVEN']) === JSON.stringify(preset.vals) ? '#3b82f6' : '#f8fafc',
+                                        color: JSON.stringify(question._tfngOptions || ['TRUE', 'FALSE', 'NOT GIVEN']) === JSON.stringify(preset.vals) ? '#fff' : '#475569',
+                                        borderColor: JSON.stringify(question._tfngOptions || ['TRUE', 'FALSE', 'NOT GIVEN']) === JSON.stringify(preset.vals) ? '#3b82f6' : '#cbd5e1',
+                                    }}
+                                    onClick={() => updateField('_tfngOptions', preset.vals)}
+                                >{preset.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div className="label-with-helper" style={{ marginTop: '20px' }}>
                     <label className="input-label-premium">Heading / Main Question Text</label>
                     {question.type === 'gap-fill' && (

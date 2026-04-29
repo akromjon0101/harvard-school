@@ -13,7 +13,8 @@ const questionSchema = new mongoose.Schema({
     placement: { type: String, default: 'below' },
     tableData: { type: mongoose.Schema.Types.Mixed },
     boxTitle: String,  // e.g. "Information" for choose-from-box
-    instructionText: String
+    instructionText: String,
+    _tfngOptions: [String]
 });
 
 const sectionSchema = new mongoose.Schema({

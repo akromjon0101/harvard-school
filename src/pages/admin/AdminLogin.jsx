@@ -59,11 +59,7 @@ export default function AdminLogin() {
                     <h2>Admin Specialist Portal</h2>
                     <p>Official access for IELTS Mock system management.</p>
                 </div>
-                <div style={{ margin: '0 0 15px 0', padding: '10px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#475569', textAlign: 'center' }}>
-                    <strong>Test Admin:</strong> admin@gmail.com <br />
-                    <strong>Password:</strong> Admin@2026!SecurePass
-                </div>
-                {error && <div style={{ color: '#e11d48', background: '#fff1f2', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>{error}</div>}
+{error && <div style={{ color: '#e11d48', background: '#fff1f2', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '13px', fontWeight: 600, textAlign: 'center' }}>{error}</div>}
                 <form onSubmit={handleLogin} className="auth-form">
                     <div className="form-group">
                         <label>Admin ID / Email</label>
