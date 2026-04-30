@@ -23,6 +23,10 @@ const TestCreator     = lazy(() => import('./pages/admin/TestCreator'))
 const AnswerSheet     = lazy(() => import('./pages/AnswerSheet'))
 import './App.css'
 import './styles/answer-sheet.css'
+import Maintenance from './pages/Maintenance'
+
+// Set this to true to enable maintenance mode, false to disable
+const IS_MAINTENANCE = true
 
 // Routes where navbar should be hidden (full-screen exam experience)
 const HIDE_NAV_PATTERNS = [/^\/exam\//, /^\/reading-session\//]
@@ -33,6 +37,7 @@ export default function App() {
 
   return (
     <>
+      {IS_MAINTENANCE && <Maintenance />}
       {!hideNav && <Navbar />}
       <Suspense fallback={<div className="loading-screen"><div className="loading-screen-spinner" /><span className="loading-screen-text">Harvard School</span></div>}>
       <Routes>
