@@ -17,11 +17,6 @@ const Maintenance = () => {
         
         <h1 className="maintenance-title">Server Error Occurred</h1>
         
-        <p className="maintenance-text">
-          We are currently experiencing technical difficulties. 
-          Our specialists are working hard to resolve the issue as soon as possible.
-        </p>
-        
         <div className="maintenance-footer">
           &copy; {new Date().getFullYear()} Harvard School IELTS. All rights reserved.
         </div>
