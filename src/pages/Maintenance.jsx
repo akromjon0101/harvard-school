@@ -15,11 +15,11 @@ const Maintenance = () => {
           Maintenance in Progress
         </div>
         
-        <h1 className="maintenance-title">Serverda muammo yuzaga keldi</h1>
+        <h1 className="maintenance-title">Server Error Occurred</h1>
         
         <p className="maintenance-text">
-          Hozirda tizimda texnik muammolar kuzatilmoqda. 
-          Mutaxassislarimiz nosozlikni bartaraf etish ustida ish olib borishmoqda.
+          We are currently experiencing technical difficulties. 
+          Our specialists are working hard to resolve the issue as soon as possible.
         </p>
         
         <div className="maintenance-footer">
