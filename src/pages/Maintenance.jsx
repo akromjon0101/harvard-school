@@ -15,11 +15,11 @@ const Maintenance = () => {
           Maintenance in Progress
         </div>
         
-        <h1 className="maintenance-title">We'll Be Back Soon!</h1>
+        <h1 className="maintenance-title">Platforma yangilanmoqda</h1>
         
         <p className="maintenance-text">
-          Our team is currently performing scheduled maintenance to improve your experience. 
-          The platform will be back online shortly. Thank you for your patience!
+          Tizim imkoniyatlarini yanada yaxshilash maqsadida texnik ishlar olib borilmoqda. 
+          Keltirilgan noqulayliklar uchun uzr so'raymiz.
         </p>
         
         <div className="maintenance-footer">
