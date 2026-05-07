@@ -26,7 +26,7 @@ import './styles/answer-sheet.css'
 import Maintenance from './pages/Maintenance'
 
 // Set this to true to enable maintenance mode, false to disable
-const IS_MAINTENANCE = false
+const IS_MAINTENANCE = true
 
 // Routes where navbar should be hidden (full-screen exam experience)
 const HIDE_NAV_PATTERNS = [/^\/exam\//, /^\/reading-session\//]
