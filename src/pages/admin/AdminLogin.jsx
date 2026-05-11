@@ -18,7 +18,7 @@ export default function AdminLogin() {
             const trimmedEmail = email.trim();
             const trimmedPassword = password.trim();
 
-            const res = await fetch(`${BASE_URL}/auth/login`, {
+            const res = await fetch(`${BASE_URL}/auth/admin-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

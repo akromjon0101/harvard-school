@@ -78,6 +78,35 @@ export const logout = async (req, res) => {
     res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 
+export const adminLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@gmail.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@2026!SecurePass';
+
+        // Check email and password match environment variables
+        if (email !== adminEmail || password !== adminPassword) {
+            return res.status(401).json({ error: 'Invalid admin credentials' });
+        }
+
+        // Find or create admin user
+        let admin = await User.findOne({ email: adminEmail, role: 'admin' });
+        if (!admin) {
+            admin = new User({
+                name: 'Admin',
+                email: adminEmail,
+                password: adminPassword,
+                role: 'admin'
+            });
+            await admin.save();
+        }
+
+        sendTokenResponse(admin, 200, res);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 export const updateProfile = async (req, res) => {
     try {
         const { name, email, currentPassword, newPassword } = req.body;
