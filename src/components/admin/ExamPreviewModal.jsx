@@ -34,7 +34,7 @@ function detectIssues(parts) {
     }
     ; (section.questions || []).forEach((q, qi) => {
       const qLabel = `Block ${qi + 1} (Q${q.startNumber ?? q.questionNumber})`
-      if (q.type === 'mcq' && (q.options || []).filter(Boolean).length < 2) {
+      if (['mcq', 'mcq-multi'].includes(q.type) && (q.options || []).filter(Boolean).length < 2) {
         issues.push({ severity: 'error', ctx, msg: `${qLabel}: MCQ has fewer than 2 options` })
       }
       if ((q.type === 'gap-fill' || q.type === 'summary-completion') && !q.questionText?.includes('[gap]')) {
@@ -167,7 +167,8 @@ export default function ExamPreviewModal({
         const tGaps = q.type === 'table-completion' && q.tableData?.rows
           ? q.tableData.rows.reduce((a, row) => a + row.reduce((b, c) => b + ((c || '').match(/\[gap\]/gi) || []).length, 0), 0)
           : 0
-        const total = Math.max(gaps, mLen, tGaps, q.correctAnswers?.length || 0, 1)
+        const isMultiMcq = q.type === 'mcq-multi' || q.type === 'mcq-multiple' || q.type === 'checkbox'
+        const total = isMultiMcq ? 2 : Math.max(gaps, mLen, tGaps, q.correctAnswers?.length || 0, 1)
         const start = q.startNumber ?? q.questionNumber
         if (typeof start === 'number') {
           for (let i = 0; i < total; i++) { nums.push(start + i); map[start + i] = pIdx }

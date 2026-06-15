@@ -57,7 +57,7 @@ function getRows(q, answers) {
     }
 
     // MCQ-multi (Choose TWO) — occupies 2 question numbers, show 1 row per answer slot
-    if (q.type === 'mcq-multi') {
+    if (q.type === 'mcq-multi' || q.type === 'mcq-multiple') {
         const studentArr = Array.isArray(answers[start]) ? answers[start] : (answers[start] != null ? [answers[start]] : [])
         const correctArr = (q.correctAnswers || []).slice(0, 2)
         return [0, 1].map(i => {

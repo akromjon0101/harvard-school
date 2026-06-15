@@ -12,6 +12,7 @@ import '../styles/highlight.css';
 // Count how many question slots a question block occupies
 function getQCount(q) {
     if (!q) return 0
+    if (q.type === 'mcq-multi' || q.type === 'mcq-multiple' || q.type === 'checkbox') return 2
     // TFNG: each non-empty line = one question
     if (q.type === 'tfng' || q.type === 'true-false-notgiven') {
         const lines = (q.questionText || '').split('\n').filter(l => l.trim()).length

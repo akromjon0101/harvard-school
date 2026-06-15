@@ -115,6 +115,14 @@ const QUESTION_TYPES = {
       example: 'According to the text, migration increased mainly due to:\nA) Climate change\nB) Economic opportunity  ← correct\nC) Political conflict',
     },
     {
+      id: 'mcq-multi',
+      label: 'Choose TWO (Multiple Choice)',
+      icon: '☑☑',
+      color: '#6366f1',
+      desc: 'Students choose TWO correct answers from options A–E',
+      example: 'Which TWO things did the author find most satisfying?\nA) support from restaurants  B) preventing waste  C) 3-D printing\nCorrect: B and C',
+    },
+    {
       id: 'gap-fill',
       label: 'Summary / Sentence Completion',
       icon: '📋',
