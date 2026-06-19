@@ -367,8 +367,9 @@ export default function IELTSExamPage() {
             setTimerPaused(false)
         } else if (isSpeaking) {
             moduleTimerRef.current = 'speaking'
-            const saved = localStorage.getItem(`exam_timer_speaking_${id}`)
-            setTimeLeft(saved ? parseInt(saved, 10) : 15 * 60)
+            // Always reset to 15 minutes on every entry — speaking timer never persists
+            localStorage.removeItem(`exam_timer_speaking_${id}`)
+            setTimeLeft(15 * 60)
             setTimerPaused(false)
         } else if (isListening) {
             moduleTimerRef.current = null
@@ -385,25 +386,29 @@ export default function IELTSExamPage() {
             localStorage.removeItem(`exam_timer_reading_${id}`)
             localStorage.removeItem(`exam_timer_writing_${id}`)
             if (moduleTimerRef.current === 'reading') {
+                // Reading done → move to writing
                 const firstWritingIdx = parts.findIndex(p => p.module === 'writing')
                 if (firstWritingIdx !== -1) {
                     setPartIndex(firstWritingIdx)
                 } else {
                     handleSubmit(true)
                 }
-            } else {
+            } else if (moduleTimerRef.current === 'writing') {
+                // Writing done → auto-submit
                 handleSubmit(true)
+            } else if (moduleTimerRef.current === 'speaking') {
+                // Speaking time is up — just stop the timer, do NOT submit.
+                // User can navigate away and re-enter speaking to get a fresh 15 minutes.
+                setTimerPaused(true)
             }
             return
         }
         if (timerPaused) return
-        // Save timer per module
+        // Save timer per module (speaking timer is NOT persisted — it always resets on re-entry)
         if (moduleTimerRef.current === 'reading') {
             localStorage.setItem(`exam_timer_reading_${id}`, String(timeLeft))
         } else if (moduleTimerRef.current === 'writing') {
             localStorage.setItem(`exam_timer_writing_${id}`, String(timeLeft))
-        } else if (moduleTimerRef.current === 'speaking') {
-            localStorage.setItem(`exam_timer_speaking_${id}`, String(timeLeft))
         }
         const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000)
         return () => clearInterval(timer)
@@ -579,6 +584,7 @@ export default function IELTSExamPage() {
             localStorage.removeItem(`exam_highlights_${id}`) // Cleanup legacy
             localStorage.removeItem(`exam_timer_reading_${id}`)
             localStorage.removeItem(`exam_timer_writing_${id}`)
+            localStorage.removeItem(`exam_timer_speaking_${id}`)
             navigate('/my-results')
         } catch (err) {
             alert('Submission failed: ' + err.message)
